@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   SISTEMA DE TEMAS — CSS Variables
+   Sobreescriben la paleta de Tailwind definida
+   en tailwind.config.js.
+   ============================================ */
+
+/* ========== DARK MODE (default) ========== */
+.dark {
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --slate-950: #020617;
+
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+
+  --emerald-400: #34d399;
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+  --emerald-900: #064e3b;
+
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+}
+
+/* ========== LIGHT MODE ========== */
+.light {
+  /* Fondos → se invierten (oscuros→claros) */
+  --slate-950: #ffffff;
+  --slate-900: #f8fafc;    /* page bg (antes bg más oscuro) */
+  --slate-800: #f1f5f9;    /* card/input bg */
+  --slate-700: #e2e8f0;    /* borders y hover */
+  --slate-600: #cbd5e1;    /* borders más marcados */
+
+  /* Textos → se invierten (claros→oscuros) */
+  --slate-50:  #0f172a;    /* headings, texto brillante */
+  --slate-200: #334155;    /* texto primario */
+  --slate-300: #475569;    /* texto secundario */
+  --slate-400: #64748b;    /* texto muted */
+  --slate-500: #94a3b8;    /* placeholder / muy muted */
+
+  /* Neutro: slate-100 se reusa como fondo sutil */
+  --slate-100: #f8fafc;
+
+  /* Teal acentos */
+  --teal-300: #5eead4;
+  --teal-400: #0d9488;    /* texto acento (más contraste) */
+  --teal-500: #0d9488;    /* iconos acento */
+  --teal-600: #14b8a6;    /* botones primary */
+  --teal-700: #0d9488;    /* hover botones */
+  --teal-800: #ccfbf1;    /* active bg (sidebar) */
+
+  /* Emerald estados */
+  --emerald-400: #059669;  /* texto éxito (más contraste) */
+  --emerald-500: #059669;  /* bg éxito */
+  --emerald-600: #047857;
+  --emerald-900: #d1fae5;  /* bg éxito sutil */
+
+  /* Rojo errores */
+  --red-400: #dc2626;
+  --red-500: #b91c1c;
+  --red-600: #991b1b;
+}
+
+/* ========== BORDER RADIUS ========== */
+.rounded-xl {
+  border-radius: 2rem !important;
+}
+
+/* Input fields */
+input, select, textarea {
+  @apply rounded-xl border transition-colors duration-200;
+}
+
+/* Buttons */
+button {
+  @apply rounded-xl transition-all duration-200;
+}
+
+/* Cards */
+.card {
+  @apply rounded-xl border p-4;
+}
+
+/* ========== BASE STYLES ========== */
+body {
+  @apply font-sans antialiased;
+}
+
+html {
+  @apply scroll-smooth;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-500 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
+
+/* Slide-in animation for SlidePanel */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in-right 0.2s ease-out;
+}
