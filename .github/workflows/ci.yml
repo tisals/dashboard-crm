@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, staging ]
+  pull_request:
+    branches: [ main, staging ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build
+      run: npm run build
+
+    # --------------------------------------------------
+    # EasyPanel deploy triggers
+    # --------------------------------------------------
+    - name: Trigger EasyPanel deploy (Production)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        # Set secrets in repo settings:
+        #   EASY_PANEL_WEBHOOK_PROD → production deploy webhook
+        #   EASY_PANEL_WEBHOOK_STAGING → staging deploy webhook
+        # curl -X POST "${{ secrets.EASY_PANEL_WEBHOOK_PROD }}" \
+        #   -H "Content-Type: application/json" \
+        #   -d '{}'
+        echo "Production webhook: set EASY_PANEL_WEBHOOK_PROD to enable."
+
+    - name: Trigger EasyPanel deploy (Staging)
+      if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+      run: |
+        # curl -X POST "${{ secrets.EASY_PANEL_WEBHOOK_STAGING }}" \
+        #   -H "Content-Type: application/json" \
+        #   -d '{}'
+        echo "Staging webhook: set EASY_PANEL_WEBHOOK_STAGING to enable."
