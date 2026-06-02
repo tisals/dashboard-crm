@@ -70,7 +70,7 @@ export function DashboardPage() {
     return data.chart.meses.map(mes => ({
       mes,
       prospectos: data.prospectos.entidades_por_mes[mes] ?? 0,
-      oportunidades: data.prospectos.oportunidades_por_mes[mes] ?? 0,
+      monto: data.prospectos.oportunidades_monto_por_mes[mes] ?? 0,
     }))
   }, [data])
 
@@ -219,14 +219,15 @@ export function DashboardPage() {
           <h3 className="text-lg font-semibold text-slate-200 mb-4">Oportunidades por Mes</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={oportunidadesPorMes}>
+              <ComposedChart data={oportunidadesPorMes}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={55} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="prospectos" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Prospectos" />
-                <Bar dataKey="oportunidades" fill="#14b8a6" radius={[4, 4, 0, 0]} name="Oportunidades" />
-              </BarChart>
+                <Bar yAxisId="left" dataKey="prospectos" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Prospectos" />
+                <Line yAxisId="right" type="monotone" dataKey="monto" stroke="#f59e0b" strokeWidth={2} dot={false} name="Monto" />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
