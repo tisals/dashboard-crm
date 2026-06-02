@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { getMarcas, deleteEntidad } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
 import { MarcaFormModal } from '../components/MarcaFormModal'
@@ -20,7 +20,7 @@ export function MarcasPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['marcas', search, page],
     queryFn: () => getMarcas({ search, per_page: perPage, page }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   })
 
   const marcas = data?.data?.data ?? []

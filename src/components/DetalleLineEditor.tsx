@@ -190,10 +190,11 @@ export function DetalleLineEditor({ lines, onChange }: Props) {
   }
 
   function updateLine(i: number, field: keyof LineaForm, value: string | number | null) {
-    onChange(prev => prev.map((line, idx) => {
+    const updated = lines.map((line, idx) => {
       if (idx !== i) return line
       return { ...line, [field]: value }
-    }))
+    })
+    onChange(updated)
   }
 
   return (

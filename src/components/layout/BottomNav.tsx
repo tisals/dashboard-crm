@@ -22,7 +22,7 @@ import {
 interface GroupButton {
   key: 'crm' | 'erp' | 'seguridad'
   label: string
-  icon: React.ComponentType<{ size?: number }>
+  icon: React.ComponentType<any>
   path: string
   module: string // for role filtering
 }

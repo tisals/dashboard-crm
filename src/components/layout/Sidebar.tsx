@@ -21,7 +21,7 @@ import {
   Flag,
 } from 'lucide-react'
 
-const moduleIcons: Record<string, React.ComponentType<{ size?: number }>> = {
+const moduleIcons: Record<string, React.ComponentType<any>> = {
   [MODULES.DASHBOARD]: LayoutDashboard,
   [MODULES.ERP_DASHBOARD]: LayoutGrid,
   [MODULES.DIRECTORIO]: Building2,

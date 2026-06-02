@@ -168,34 +168,34 @@ export interface Maestro {
 
 export interface Contacto {
   id: number
-  entidad_id: number
+  entidad_id: number | null
   nombres: string
   apellidos: string
-  area?: string
-  cargo?: string
-  tel_contacto?: string
-  movil?: string
-  email_contacto?: string
-  email_secundario?: string
-  rol?: string
-  etapa?: string
+  area?: string | null
+  cargo?: string | null
+  tel_contacto?: string | null
+  movil?: string | null
+  email_contacto?: string | null
+  email_secundario?: string | null
+  rol?: string | null
+  etapa?: string | null
   estado: string
   created_at: string
   entidad_nombre?: string
 }
 
 export interface ContactoCreate {
-  entidad_id: number
+  entidad_id?: number | null
   nombres: string
   apellidos: string
-  area?: string
-  cargo?: string
-  tel_contacto?: string
-  movil?: string
-  email_contacto?: string
-  email_secundario?: string
-  rol?: string
-  etapa?: string
+  area?: string | null
+  cargo?: string | null
+  tel_contacto?: string | null
+  movil?: string | null
+  email_contacto?: string | null
+  email_secundario?: string | null
+  rol?: string | null
+  etapa?: string | null
 }
 
 // ── Seguimiento ──────────────────────────────────

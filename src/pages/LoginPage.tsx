@@ -18,21 +18,24 @@ export function LoginPage() {
 
     try {
       const response = await apiLogin({ email, password })
-      const { token, usuario } = response.data ?? {}
+      if (!response.data || !response.data.token || !response.data.usuario) {
+        throw new Error('Respuesta inválida del servidor')
+      }
+      const { token, usuario } = response.data
 
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(usuario))
 
-      authLogin({ ...usuario, token })
+      await authLogin({ ...usuario, token })
 
       navigate('/dashboard', { replace: true })
-    } catch (err: unknown) {
+    } catch (err: any) {
       const axiosErr = err as { response?: { data?: { error?: string } } }
       const message =
         axiosErr?.response?.data?.error ??
-        err instanceof Error
+        (err instanceof Error
           ? err.message
-          : 'Error de conexión'
+          : 'Error de conexión')
       setError(message)
     } finally {
       setLoading(false)

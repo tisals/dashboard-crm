@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { createEntidad, updateEntidad, getCiudades, getCiudad } from '../api/crmApi'
-import type { Entidad, EntidadCreate, Ciudad } from '../api/types'
+import {
+  createEntidad,
+  updateEntidad,
+  getCiudades,
+  getCiudad,
+  getUsuarios,
+  getEntidadUsuarios,
+  assignEntidadUsuario,
+  removeEntidadUsuario,
+} from '../api/crmApi'
+import type { Entidad, EntidadCreate, Ciudad, Usuario } from '../api/types'
 import { SlidePanel } from './SlidePanel'
 import { Search } from 'lucide-react'
 
@@ -22,6 +31,7 @@ type FormState = {
   email: string
   telefono: string
   estado: string
+  usuario_id: string
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>
@@ -38,6 +48,7 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     email: '',
     telefono: '',
     estado: 'Prospecto',
+    usuario_id: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
@@ -45,6 +56,29 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   const [showCiudadDropdown, setShowCiudadDropdown] = useState(false)
   const [selectedCiudadNombre, setSelectedCiudadNombre] = useState('')
   const ciudadRef = useRef<HTMLDivElement>(null)
+
+  // Fetch active users for assignment dropdown
+  const { data: usuariosData } = useQuery({
+    queryKey: ['usuarios', 'list'],
+    queryFn: () => getUsuarios({ per_page: 100 }),
+  })
+  const usuarios: Usuario[] = (usuariosData?.data as any)?.data ?? usuariosData?.data ?? []
+  const comerciales = usuarios.filter(u => u.estado === 'Activo')
+
+  // Get currently assigned user for this entity if editing
+  const { data: assignedUsersRes } = useQuery({
+    queryKey: ['entidad-usuarios', entidad?.id],
+    queryFn: () => getEntidadUsuarios(entidad!.id),
+    enabled: !!entidad?.id,
+  })
+  const assignedUsers = assignedUsersRes?.data ?? []
+  const initialAssignedUserId = assignedUsers[0]?.id
+
+  useEffect(() => {
+    if (assignedUsers.length > 0) {
+      setForm(prev => ({ ...prev, usuario_id: assignedUsers[0].id.toString() }))
+    }
+  }, [assignedUsers])
 
   // Buscar ciudades con el texto ingresado
   const { data: ciudadesData, isLoading: loadingCiudades } = useQuery({
@@ -77,7 +111,6 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   const handleCiudadInputChange = useCallback((value: string) => {
     setCiudadSearch(value)
     setShowCiudadDropdown(true)
-    // Si limpia el input, también limpia el código seleccionado
     if (!value.trim()) {
       setForm(prev => ({ ...prev, ciudad_cod: '' }))
     }
@@ -95,6 +128,7 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
         email: entidad.email ?? '',
         telefono: entidad.telefono ?? '',
         estado: entidad.estado,
+        usuario_id: '',
       })
     }
   }, [entidad])
@@ -126,11 +160,28 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
         ciudad_cod: form.ciudad_cod || undefined,
         direccion: form.direccion || undefined,
       }
+      let savedEntity: Entidad
       if (isEdit) {
-        await updateEntidad(entidad!.id, payload)
+        const res = await updateEntidad(entidad!.id, payload)
+        savedEntity = res.data ?? entidad!
       } else {
-        await createEntidad(payload)
+        const res = await createEntidad(payload)
+        savedEntity = res.data!
       }
+
+      // Sync assigned user
+      const newUserId = form.usuario_id ? Number(form.usuario_id) : null
+      const oldUserId = initialAssignedUserId ?? null
+
+      if (newUserId !== oldUserId) {
+        if (oldUserId) {
+          await removeEntidadUsuario({ usuario_id: oldUserId, entidad_id: savedEntity.id })
+        }
+        if (newUserId) {
+          await assignEntidadUsuario({ usuario_id: newUserId, entidad_id: savedEntity.id })
+        }
+      }
+
       onSuccess()
       onClose()
     } catch (err: unknown) {
@@ -250,6 +301,19 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
           </div>
         </div>
+
+        {/* Comercial Asignado */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">Comercial Asignado</label>
+          <select value={form.usuario_id} onChange={(e) => setForm({...form, usuario_id: e.target.value})}
+            className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500">
+            <option value="">Sin comercial asignado</option>
+            {comerciales.map(u => (
+              <option key={u.id} value={u.id}>{u.nombre} ({u.rol_nombre ?? 'Comercial'})</option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2.5 text-slate-400 hover:text-slate-200 rounded-xl transition-colors">Cancelar</button>
           <button type="submit" disabled={loading} className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors">

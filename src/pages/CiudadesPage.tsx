@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Search, MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
 import { getCiudades, createCiudad, updateCiudad, deleteCiudad } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
@@ -113,7 +113,7 @@ export function CiudadesPage() {
   const { data: ciudadesData, isLoading } = useQuery({
     queryKey: ['ciudades', search, page],
     queryFn: () => getCiudades({ search: search || undefined, per_page: perPage, page }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   })
   const ciudades = ciudadesData?.data?.data ?? []
   const total = ciudadesData?.data?.total ?? 0

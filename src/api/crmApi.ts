@@ -462,4 +462,14 @@ export async function getEntidadUsuarios(entidadId: number) {
   return data
 }
 
+export async function assignEntidadUsuario(payload: { usuario_id: number; entidad_id: number }) {
+  const { data } = await crmApi.post<ApiResponse<any>>('/entidad-usuario', payload)
+  return data
+}
+
+export async function removeEntidadUsuario(payload: { usuario_id: number; entidad_id: number }) {
+  const { data } = await crmApi.delete<ApiResponse<any>>('/entidad-usuario', { data: payload })
+  return data
+}
+
 export default crmApi

@@ -5,7 +5,7 @@ import type { DashboardData } from '../api/types'
 export function useDashboard() {
   const query = useQuery<DashboardData>({
     queryKey: ['dashboard'],
-    queryFn: getDashboard,
+    queryFn: () => getDashboard(),
     staleTime: 300000, // 5 min
     refetchInterval: 60000, // 60s polling
     retry: 2,

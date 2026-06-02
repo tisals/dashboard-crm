@@ -68,8 +68,8 @@ export function MarcaFormModal({ initialData, onClose }: Props) {
     mutationFn: (data: typeof form) => {
       const payload = {
         ...data,
-        tipo_persona: isEdit ? (initialData as any).tipo_persona ?? 'Juridica' : 'Juridica',
-        estado: 'Propia',
+        tipo_persona: (isEdit ? (initialData as any).tipo_persona ?? 'Juridica' : 'Juridica') as 'Natural' | 'Juridica',
+        estado: 'Propia' as 'Activo' | 'Inactivo' | 'Prospecto' | 'Propia',
       }
       // ensure empty ciudad_cod is omitted to avoid DB validation
       if (!payload.ciudad_cod) delete (payload as any).ciudad_cod

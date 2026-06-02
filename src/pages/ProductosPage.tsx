@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Search, Package, Plus, Pencil, Trash2 } from 'lucide-react'
 import { getProductos, deleteProducto } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
@@ -20,7 +20,7 @@ export function ProductosPage() {
   const { data: productosData, isLoading } = useQuery({
     queryKey: ['productos', search, page],
     queryFn: () => getProductos({ search: search || undefined, per_page: perPage, page }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   })
   const productos = productosData?.data?.data ?? []
   const total = productosData?.data?.total ?? 0

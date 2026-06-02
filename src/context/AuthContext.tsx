@@ -12,7 +12,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (userData: AuthUser) => Promise<void>
+  login: (userData: { id: number; email: string; nombre: string; rol_id: number; token?: string }) => Promise<void>
   logout: () => void
   hasPermission: (module: string, action: 'create' | 'read' | 'update' | 'delete') => boolean
   canAccessModule: (module: string) => boolean

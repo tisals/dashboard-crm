@@ -1,4 +1,4 @@
-import { Phone, Mail, MessageSquare, Calendar, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Phone, Mail, MessageSquare, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { Contacto } from '../api/types'
 import { SeguimientoModal } from './SeguimientoModal'
@@ -113,7 +113,7 @@ export function ContactCard({ contacto, oportunidadId, entidadId, onLogged, onEd
           contactoId={contacto.id}
           contactoNombre={nombreCompleto}
           oportunidadId={oportunidadId}
-          entidadId={entidadId ?? contacto.entidad_id}
+          entidadId={entidadId ?? (contacto.entidad_id || undefined)}
           onClose={() => setShowModal(false)}
           onLogged={onLogged}
         />

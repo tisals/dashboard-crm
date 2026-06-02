@@ -1,31 +1,9 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Users, Plus, Pencil, Trash2, Building2, X, UserPlus, ChevronDown } from 'lucide-react'
+import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown } from 'lucide-react'
 import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
-
-interface Contacto {
-  id: number
-  entidad_id: number | null
-  nombres: string
-  apellidos: string
-  area: string | null
-  cargo: string | null
-  tel_contacto: string | null
-  movil: string | null
-  email_contacto: string | null
-  email_secundario: string | null
-  rol: string | null
-  etapa: string | null
-  estado: string
-  entidad_nombre?: string
-}
-
-interface Entidad {
-  id: number
-  nombre: string
-  identificacion: string
-}
+import { Contacto, Entidad } from '../api/types'
 
 export function ContactosPage() {
   const queryClient = useQueryClient()
@@ -277,16 +255,37 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoa
     tel_contacto: '', movil: '', cargo: '', area: '', rol: '', etapa: '', entidad_id: '',
   })
 
-  useState(() => {
-    if (contacto) setForm({
-      nombres: contacto.nombres, apellidos: contacto.apellidos,
-      email_contacto: contacto.email_contacto ?? '', email_secundario: contacto.email_secundario ?? '',
-      tel_contacto: contacto.tel_contacto ?? '', movil: contacto.movil ?? '',
-      cargo: contacto.cargo ?? '', area: contacto.area ?? '',
-      rol: contacto.rol ?? '', etapa: contacto.etapa ?? '',
-      entidad_id: contacto.entidad_id?.toString() ?? '',
-    })
-  })
+  useEffect(() => {
+    if (contacto) {
+      setForm({
+        nombres: contacto.nombres,
+        apellidos: contacto.apellidos,
+        email_contacto: contacto.email_contacto ?? '',
+        email_secundario: contacto.email_secundario ?? '',
+        tel_contacto: contacto.tel_contacto ?? '',
+        movil: contacto.movil ?? '',
+        cargo: contacto.cargo ?? '',
+        area: contacto.area ?? '',
+        rol: contacto.rol ?? '',
+        etapa: contacto.etapa ?? '',
+        entidad_id: contacto.entidad_id?.toString() ?? '',
+      })
+    } else {
+      setForm({
+        nombres: '',
+        apellidos: '',
+        email_contacto: '',
+        email_secundario: '',
+        tel_contacto: '',
+        movil: '',
+        cargo: '',
+        area: '',
+        rol: '',
+        etapa: '',
+        entidad_id: '',
+      })
+    }
+  }, [contacto, open])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

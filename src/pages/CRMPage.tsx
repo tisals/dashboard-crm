@@ -40,7 +40,7 @@ import {
   getMaestros,
   getEntidadUsuarios,
 } from '../api/crmApi'
-import type { Oportunidad, OportunidadEstado, Entidad, DetalleOportunidadBackend, Producto, Maestro, Usuario } from '../api/types'
+import type { Oportunidad, OportunidadEstado, Entidad, DetalleOportunidadBackend, Producto, Maestro, Usuario, DetalleOportunidadCreate } from '../api/types'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { CotizacionEditor } from '../components/CotizacionEditor'
 import { DetalleLineEditor, type LineaForm } from '../components/DetalleLineEditor'
@@ -458,7 +458,7 @@ function NuevaOportunidadModal({
   }
 
   return (
-    <SlidePanel open onClose={onClose} title="Nueva Oportunidad" mode="split">
+    <SlidePanel open onClose={onClose} title="Nueva Oportunidad" mode="overlay">
       {error && (
         <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
           {error}
@@ -791,8 +791,8 @@ export function CRMPage() {
         return
       }
       for (const line of validLines) {
-        const payload: Record<string, unknown> = {
-          producto_id: line.producto_id,
+        const payload: DetalleOportunidadCreate = {
+          producto_id: line.producto_id!,
           concepto: line.concepto || undefined,
           descripcion: line.descripcion || undefined,
           cantidad: line.cantidad,
@@ -945,9 +945,9 @@ export function CRMPage() {
     })
   }
 
-  function handleSaveCotizacion(data: Partial<Oportunidad>) {
+  async function handleSaveCotizacion(data: Partial<Oportunidad>): Promise<void> {
     if (!selectedOportunidadId) return
-    return saveForm.mutateAsync({ id: selectedOportunidadId, formData: data })
+    await saveForm.mutateAsync({ id: selectedOportunidadId, formData: data })
   }
 
   if (isLoading) {
@@ -1294,36 +1294,36 @@ export function CRMPage() {
                       <div key={contacto.id} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="text-slate-200 font-medium">{contacto.nombre}</p>
+                            <p className="text-slate-200 font-medium">{`${contacto.nombres} ${contacto.apellidos}`.trim()}</p>
                             {contacto.cargo && (
                               <p className="text-slate-400 text-sm">{contacto.cargo}</p>
                             )}
                             <div className="flex gap-3 mt-2">
-                              {contacto.telefono && (
+                              {(contacto.movil || contacto.tel_contacto) && (
                                 <a 
-                                  href={`tel:${contacto.telefono}`}
+                                  href={`tel:${contacto.movil || contacto.tel_contacto}`}
                                   className="text-slate-400 hover:text-teal-400 text-sm flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Phone size={14} />
-                                  <span>{contacto.telefono}</span>
+                                  <span>{contacto.movil || contacto.tel_contacto}</span>
                                 </a>
                               )}
-                              {contacto.email && (
+                              {contacto.email_contacto && (
                                 <a 
-                                  href={`mailto:${contacto.email}`}
+                                  href={`mailto:${contacto.email_contacto}`}
                                   className="text-slate-400 hover:text-teal-400 text-sm flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Mail size={14} />
-                                  <span>{contacto.email}</span>
+                                  <span>{contacto.email_contacto}</span>
                                 </a>
                               )}
                             </div>
                           </div>
                         </div>
                         <button
-                          onClick={() => handleOpenSeguimiento(contacto.id, contacto.nombre)}
+                          onClick={() => handleOpenSeguimiento(contacto.id, `${contacto.nombres} ${contacto.apellidos}`.trim())}
                           className="mt-3 w-full py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                           <MessageSquare size={14} />
