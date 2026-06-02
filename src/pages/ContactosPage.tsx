@@ -19,7 +19,7 @@ export function ContactosPage() {
 
   const { data: entidadesData } = useQuery({
     queryKey: ['entidades', 'list'],
-    queryFn: () => getEntidades({ per_page: 500 }),
+    queryFn: () => getEntidades({ per_page: 2000 }),
   })
   const entidades: Entidad[] = entidadesData?.data?.data ?? []
 
@@ -367,6 +367,11 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoa
           <select value={form.entidad_id} onChange={e => setForm({ ...form, entidad_id: e.target.value })}
             className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500">
             <option value="">Sin entidad</option>
+            {contacto && contacto.entidad_id && !entidades.some(ent => ent.id === contacto.entidad_id) && (
+              <option value={contacto.entidad_id.toString()}>
+                {contacto.entidad_nombre ?? `Entidad #${contacto.entidad_id}`}
+              </option>
+            )}
             {entidades.map(ent => (<option key={ent.id} value={ent.id.toString()}>{ent.nombre}</option>))}
           </select>
         </div>
