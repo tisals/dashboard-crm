@@ -389,7 +389,7 @@ export function DirectorioPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500">{new Date(op.fecha).toLocaleDateString('es-ES')}</span>
-                      {op.valor != null && <span className="text-xs font-medium text-slate-300">${op.valor.toLocaleString('es-CO')}</span>}
+                      {op.valor != null && <span className="text-xs font-medium text-slate-300">${op.valor.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>}
                     </div>
                   </div>
                 ))

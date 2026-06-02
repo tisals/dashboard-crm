@@ -142,7 +142,14 @@ function OportunidadCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-slate-200 text-sm">{oportunidad.codigo}</p>
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-slate-200 text-sm">{oportunidad.codigo}</p>
+            {oportunidad.valor != null && oportunidad.valor > 0 && (
+              <span className="text-xs font-semibold text-teal-400">
+                ${Number(oportunidad.valor).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            )}
+          </div>
           <p className="text-slate-400 text-xs truncate">
             {oportunidad.entidad_nombre ?? `#${oportunidad.entidad_id}`}
           </p>
@@ -1112,7 +1119,7 @@ export function CRMPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-teal-400">
-                    {op.valor != null && op.valor > 0 ? `$${Number(op.valor).toLocaleString()}` : '—'}
+                    {op.valor != null && op.valor > 0 ? `$${Number(op.valor).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
