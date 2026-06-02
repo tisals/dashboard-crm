@@ -976,7 +976,7 @@ export function CRMPage() {
     <div className="flex gap-0">
       <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-50">CRM</h1>
           <p className="text-slate-400">{totalOpps} oportunidades{lastPage > 1 ? ` (pág. ${currentPage} de ${lastPage})` : ''}</p>
@@ -1204,12 +1204,12 @@ export function CRMPage() {
     {/* Opportunity Detail Sidebar — split en desktop, overlay en mobile */}
       {selectedOportunidadId && selectedOpp && (
         <>
-          {/* Backdrop for mobile */}
+          {/* Backdrop for mobile/tablet */}
           <div 
-            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            className="fixed inset-0 bg-black/40 z-30 xl:hidden"
             onClick={handleCloseSidebar}
           />
-          <div className="fixed md:static right-0 top-0 h-full md:h-auto w-full md:w-[30%] md:min-w-[380px] max-w-[640px] z-40 md:z-auto bg-slate-900 border-l border-slate-700 flex flex-col overflow-y-auto shadow-2xl">
+          <div className="fixed xl:static right-0 top-0 h-full xl:h-auto w-full xl:w-[30%] xl:min-w-[380px] max-w-[640px] z-40 xl:z-auto bg-slate-900 border-l border-slate-700 flex flex-col overflow-y-auto shadow-2xl">
             {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Header */}
