@@ -84,7 +84,7 @@ export async function getDashboard(params?: { comercial_id?: number; fecha_inici
 
 // ── Entidades ────────────────────────────────────
 
-export async function getEntidades(params?: { search?: string; per_page?: number; estado?: string; sort_by?: string; sort_order?: string }) {
+export async function getEntidades(params?: { search?: string; per_page?: number; estado?: string; sort_by?: string; sort_order?: string; page?: number }) {
   const { data } = await crmApi.get<ApiResponse<{ data: Entidad[]; total: number }>>('/entidad', { params })
   return data
 }

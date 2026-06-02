@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -580,7 +580,6 @@ export function CRMPage() {
     fecha_desde: '',
     fecha_hasta: '',
   })
-  const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -590,7 +589,6 @@ export function CRMPage() {
   })
   function handleFilterChange(newFilters: typeof filters) {
     setFilters(newFilters)
-    setPage(1)
   }
 
   function toggleSort(column: string) {
@@ -600,7 +598,6 @@ export function CRMPage() {
       setSortBy(column)
       setSortOrder('asc')
     }
-    setPage(1)
   }
 
   const sortIndicator = (column: string) => {
@@ -638,27 +635,42 @@ export function CRMPage() {
     }
   }, [searchParams])
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['oportunidades', filters, page, sortBy, sortOrder],
-    queryFn: () =>
-      getOportunidades({
+  const PER_PAGE = 50
+
+  const {
+    data: oportunidadesPages,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ['oportunidades', filters, sortBy, sortOrder],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await getOportunidades({
         search: filters.search || undefined,
         estado: filters.estado || undefined,
         entidad_id: filters.entidad_id ? Number(filters.entidad_id) : undefined,
         producto_id: filters.producto_id ? Number(filters.producto_id) : undefined,
         fecha_desde: filters.fecha_desde || undefined,
         fecha_hasta: filters.fecha_hasta || undefined,
-        page,
-        per_page: 50,
+        page: pageParam,
+        per_page: PER_PAGE,
         sort_by: sortBy,
         sort_order: sortOrder,
-      }),
+      })
+      return res
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const total = lastPage.data?.total ?? 0
+      const loaded = allPages.length * PER_PAGE
+      return loaded < total ? allPages.length + 1 : undefined
+    },
   })
 
-  const oportunidades: Oportunidad[] = data?.data?.data ?? []
-  const totalOpps = data?.data?.total ?? 0
-  const currentPage = data?.data?.current_page ?? 1
-  const lastPage = data?.data?.last_page ?? 1
+  const oportunidades: Oportunidad[] = oportunidadesPages?.pages.flatMap(p => p.data?.data ?? []) ?? []
+  const totalOpps = oportunidadesPages?.pages[0]?.data?.total ?? 0
 
   const byEstado = useMemo(() => {
     const map: Record<string, Oportunidad[]> = {}
@@ -979,7 +991,7 @@ export function CRMPage() {
       <div className="flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-50">CRM</h1>
-          <p className="text-slate-400">{totalOpps} oportunidades{lastPage > 1 ? ` (pág. ${currentPage} de ${lastPage})` : ''}</p>
+          <p className="text-slate-400">{totalOpps} oportunidades</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View toggle */}
@@ -1138,58 +1150,33 @@ export function CRMPage() {
             })}
             </tbody>
           </table>
-          {/* Pagination */}
-          {lastPage > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700">
-              <span className="text-xs text-slate-500">
-                Mostrando {((currentPage - 1) * 50) + 1}–{Math.min(currentPage * 50, totalOpps)} de {totalOpps}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Anterior
-                </button>
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(lastPage, 7) }, (_, i) => {
-                    let pageNum: number
-                    if (lastPage <= 7) {
-                      pageNum = i + 1
-                    } else if (currentPage <= 4) {
-                      pageNum = i + 1
-                    } else if (currentPage >= lastPage - 3) {
-                      pageNum = lastPage - 6 + i
-                    } else {
-                      pageNum = currentPage - 3 + i
-                    }
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setPage(pageNum)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          pageNum === currentPage
-                            ? 'bg-teal-700 text-teal-300'
-                            : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-200'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  onClick={() => setPage(p => Math.min(lastPage, p + 1))}
-                  disabled={currentPage >= lastPage}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Cargar más */}
+      {!isLoading && oportunidades.length > 0 && hasNextPage && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 rounded-xl border border-slate-600 text-sm font-medium transition-colors"
+          >
+            {isFetchingNextPage ? (
+              'Cargando...'
+            ) : (
+              <>
+                Cargar más
+                <ChevronDown size={16} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!isLoading && (
+        <p className="text-xs text-slate-500 text-center mt-4">
+          {oportunidades.length} de {totalOpps} oportunidad{totalOpps !== 1 ? 'es' : ''}
+        </p>
       )}
 
       </div>

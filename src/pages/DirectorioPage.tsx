@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Plus, Search, ArrowLeft, X, Mail, Phone, Pencil } from 'lucide-react'
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { Building2, Plus, Search, ArrowLeft, X, Mail, Phone, Pencil, ChevronDown } from 'lucide-react'
 import { getEntidades, getContactos, getSeguimientos, getOportunidades, deleteContacto } from '../api/crmApi'
 import { ContactCard } from '../components/ContactCard'
 import { ContactoFormModal } from '../components/ContactoFormModal'
@@ -30,13 +30,38 @@ export function DirectorioPage() {
     }
   }, [searchParams])
 
-  // Fetch entities with search filter
-  const { data: entidadesData, isLoading } = useQuery({
+  const PER_PAGE = 50
+
+  // Fetch entities with search filter using infinite query
+  const {
+    data: entidadesPages,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
     queryKey: ['entidades', search, estadoFilter, sortBy, sortOrder],
-    queryFn: () => getEntidades({ search, per_page: 50, estado: estadoFilter || undefined, sort_by: sortBy, sort_order: sortOrder }),
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await getEntidades({
+        search: search || undefined,
+        estado: estadoFilter || undefined,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+        per_page: PER_PAGE,
+        page: pageParam,
+      })
+      return res
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const total = lastPage.data?.total ?? 0
+      const loaded = allPages.length * PER_PAGE
+      return loaded < total ? allPages.length + 1 : undefined
+    },
   })
 
-  const entidades = entidadesData?.data?.data ?? []
+  const entidades: Entidad[] = entidadesPages?.pages.flatMap(p => p.data?.data ?? []) ?? []
+  const totalEntidades = entidadesPages?.pages[0]?.data?.total ?? 0
 
   // Fetch contacts for selected entity
   const { data: contactosData } = useQuery({
@@ -180,8 +205,33 @@ export function DirectorioPage() {
             </div>
           ))
         )}
-      </div>
+      {/* Cargar más */}
+      {!isLoading && entidades.length > 0 && hasNextPage && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 rounded-xl border border-slate-600 text-sm font-medium transition-colors"
+          >
+            {isFetchingNextPage ? (
+              'Cargando...'
+            ) : (
+              <>
+                Cargar más
+                <ChevronDown size={16} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
+      {!isLoading && (
+        <p className="text-xs text-slate-500 text-center mt-4">
+          {entidades.length} de {totalEntidades} entidad{totalEntidades !== 1 ? 'es' : ''}
+        </p>
+      )}
+
+      </div>
       </div>
 
       {/* Slide-in Entity Detail Panel */}

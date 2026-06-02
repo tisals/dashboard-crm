@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown } from 'lucide-react'
-import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto } from '../api/crmApi'
+import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown, MessageSquare } from 'lucide-react'
+import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto, getSeguimientos } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
 import { Contacto, Entidad } from '../api/types'
+import { SeguimientoModal } from '../components/SeguimientoModal'
+import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 
 export function ContactosPage() {
   const queryClient = useQueryClient()
@@ -13,6 +15,7 @@ export function ContactosPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedContacto, setSelectedContacto] = useState<Contacto | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const [seguimientoContacto, setSeguimientoContacto] = useState<Contacto | null>(null)
 
   const { data: entidadesData } = useQuery({
     queryKey: ['entidades', 'list'],
@@ -175,6 +178,10 @@ export function ContactosPage() {
 
               {/* Action buttons (visible on hover) */}
               <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => { e.stopPropagation(); setSeguimientoContacto(c) }}
+                  className="p-1.5 text-slate-400 hover:text-teal-400 rounded-lg hover:bg-slate-700 transition-colors" title="Registrar seguimiento">
+                  <MessageSquare size={14} />
+                </button>
                 <button onClick={(e) => { e.stopPropagation(); handleEdit(c) }}
                   className="p-1.5 text-slate-400 hover:text-yellow-400 rounded-lg hover:bg-slate-700 transition-colors" title="Editar">
                   <Pencil size={14} />
@@ -239,6 +246,21 @@ export function ContactosPage() {
           open={detailOpen} onClose={() => setDetailOpen(false)}
           contacto={selectedContacto} entidades={entidades}
           onEdit={() => { setDetailOpen(false); handleEdit(selectedContacto) }}
+          onSeguimiento={() => { setDetailOpen(false); setSeguimientoContacto(selectedContacto) }}
+        />
+      )}
+
+      {/* Seguimiento Modal */}
+      {seguimientoContacto && (
+        <SeguimientoModal
+          contactoId={seguimientoContacto.id}
+          contactoNombre={`${seguimientoContacto.nombres} ${seguimientoContacto.apellidos}`}
+          entidadId={seguimientoContacto.entidad_id || undefined}
+          onClose={() => setSeguimientoContacto(null)}
+          onLogged={() => {
+            queryClient.invalidateQueries({ queryKey: ['contactos'] })
+            queryClient.invalidateQueries({ queryKey: ['seguimientos'] })
+          }}
         />
       )}
       </div>
@@ -345,7 +367,7 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoa
           <select value={form.entidad_id} onChange={e => setForm({ ...form, entidad_id: e.target.value })}
             className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500">
             <option value="">Sin entidad</option>
-            {entidades.map(ent => (<option key={ent.id} value={ent.id}>{ent.nombre}</option>))}
+            {entidades.map(ent => (<option key={ent.id} value={ent.id.toString()}>{ent.nombre}</option>))}
           </select>
         </div>
 
@@ -364,9 +386,16 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoa
 
 // ── Detail Panel (30% width) ─────────────────────────────────────
 
-function ContactoDetailPanel({ open, onClose, contacto, entidades, onEdit }: {
-  open: boolean; onClose: () => void; contacto: Contacto; entidades: Entidad[]; onEdit: () => void
+function ContactoDetailPanel({ open, onClose, contacto, entidades, onEdit, onSeguimiento }: {
+  open: boolean; onClose: () => void; contacto: Contacto; entidades: Entidad[]; onEdit: () => void; onSeguimiento: () => void
 }) {
+  const { data: seguimientosData } = useQuery({
+    queryKey: ['seguimientos', 'contacto', contacto.id],
+    queryFn: () => getSeguimientos({ contacto_id: contacto.id, per_page: 100 }),
+    enabled: !!contacto.id,
+  })
+  const seguimientos = seguimientosData?.data?.data ?? []
+
   function getEntidadName(): string {
     if (contacto.entidad_nombre) return contacto.entidad_nombre
     if (!contacto.entidad_id) return 'Sin entidad'
@@ -419,6 +448,15 @@ function ContactoDetailPanel({ open, onClose, contacto, entidades, onEdit }: {
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm transition-colors">
             <Pencil size={14} /> Editar
           </button>
+          <button onClick={onSeguimiento}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-sm font-medium transition-colors">
+            <MessageSquare size={14} /> Seguimiento
+          </button>
+        </div>
+
+        {/* Timeline */}
+        <div className="pt-4 border-t border-slate-700">
+          <SeguimientoTimeline seguimientos={seguimientos} />
         </div>
       </div>
     </SlidePanel>
