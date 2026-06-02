@@ -1,7 +1,6 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  ArrowUpRight,
-  ArrowDownRight,
   TrendingUp,
   Users,
   DollarSign,
@@ -19,6 +18,7 @@ import {
   LineChart,
   Line,
   CartesianGrid,
+  ComposedChart,
 } from 'recharts'
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -37,11 +37,39 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d`
 }
 
+const tooltipStyle = {
+  backgroundColor: '#1e293b',
+  border: '1px solid #334155',
+  borderRadius: '8px',
+  color: '#e2e8f0',
+}
+
+function currency(value: number) {
+  return `$${value.toLocaleString('es-CO')}`
+}
+
 export function DashboardPage() {
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: getDashboard,
   })
+
+  const ventasPorMes = useMemo(() => {
+    if (!data) return []
+    return Object.entries(data.ventas.ventas_por_mes).map(([mes, total]) => ({
+      mes,
+      ventas: total,
+    }))
+  }, [data])
+
+  const chartCombo = useMemo(() => {
+    if (!data) return []
+    return data.chart.meses.map((mes, i) => ({
+      mes,
+      clientes: data.chart.entidades_convertidas[i],
+      ventas: data.chart.ventas[i],
+    }))
+  }, [data])
 
   if (isLoading) {
     return (
@@ -56,7 +84,7 @@ export function DashboardPage() {
     )
   }
 
-  if (error) {
+  if (error || !data) {
     return (
       <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
         Error al cargar dashboard. Revisa la conexión con el API.
@@ -64,32 +92,28 @@ export function DashboardPage() {
     )
   }
 
-  const { kpi, oportunidades_por_estado, ventas_4_semanas, actividades_recientes } = data
+  const { prospectos, ventas, chart: chartData, actividades_recientes } = data
 
   const kpiItems = [
     {
-      label: 'Oportunidades',
-      value: kpi.total_oportunidades,
-      change: null,
-      icon: Target,
+      label: 'Nuevos Leads',
+      value: prospectos.nuevos_leads_mes,
+      icon: Users,
     },
     {
       label: 'Tasa Conversión',
-      value: `${kpi.tasa_conversion}%`,
-      change: null,
+      value: `${prospectos.tasa_conversion}%`,
       icon: TrendingUp,
     },
     {
       label: 'Ventas Mes',
-      value: `$${Number(kpi.ventas_mes).toLocaleString()}`,
-      change: null,
+      value: currency(ventas.ventas_mes),
       icon: DollarSign,
     },
     {
-      label: 'Nuevos Leads',
-      value: kpi.nuevos_leads_mes,
-      change: null,
-      icon: Users,
+      label: 'LTV Promedio',
+      value: currency(ventas.ltv),
+      icon: Target,
     },
   ]
 
@@ -101,91 +125,105 @@ export function DashboardPage() {
         <p className="text-slate-400">Resumen de tu actividad</p>
       </div>
 
-      {/* KPIs Grid */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpiItems.map((kpiItem) => {
-          const Icon = kpiItem.icon
+        {kpiItems.map((item) => {
+          const Icon = item.icon
           return (
-            <div key={kpiItem.label} className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <div key={item.label} className="bg-slate-800 p-4 rounded-xl border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
                 <Icon size={16} className="text-teal-500" />
-                <p className="text-slate-400 text-sm">{kpiItem.label}</p>
+                <p className="text-slate-400 text-sm">{item.label}</p>
               </div>
-              <span className="text-2xl font-bold text-slate-50">{kpiItem.value}</span>
+              <span className="text-2xl font-bold text-slate-50">{item.value}</span>
             </div>
           )
         })}
       </div>
 
-      {/* Charts */}
+      {/* Charts row 1 */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Oportunidades por estado - Bar chart */}
+        {/* Oportunidades por estado */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
           <h3 className="text-lg font-semibold text-slate-200 mb-4">Oportunidades por Estado</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={oportunidades_por_estado}>
+              <BarChart data={prospectos.oportunidades_por_estado}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="estado"
-                  tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  axisLine={{ stroke: '#334155' }}
-                />
-                <YAxis
-                  tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  axisLine={{ stroke: '#334155' }}
-                  width={30}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#e2e8f0',
-                  }}
-                />
+                <XAxis dataKey="estado" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <Tooltip contentStyle={tooltipStyle} />
                 <Bar dataKey="total" fill="#14b8a6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Ventas 4 semanas - Line chart */}
+        {/* Ventas por Mes */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Ventas Últimas 4 Semanas</h3>
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Ventas por Mes</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={ventas_4_semanas}>
+              <LineChart data={ventasPorMes}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="semana"
-                  tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  axisLine={{ stroke: '#334155' }}
-                />
-                <YAxis
-                  tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  axisLine={{ stroke: '#334155' }}
-                  width={50}
-                  tickFormatter={v => `$${v.toLocaleString()}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#e2e8f0',
-                  }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, 'Ventas']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#14b8a6"
-                  strokeWidth={2}
-                  dot={{ fill: '#14b8a6', r: 4 }}
-                />
+                <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [currency(value), 'Ventas']} />
+                <Line type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={{ fill: '#14b8a6', r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts row 2 */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Clientes convertidos + Ventas (12 meses) */}
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Clientes Nuevos vs Ventas</h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartCombo}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
+                <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar yAxisId="left" dataKey="clientes" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Clientes" />
+                <Line yAxisId="right" type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={false} name="Ventas" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Funnel (oportunidades por estado con montos) */}
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Funnel de Ventas</h3>
+          <div className="space-y-2">
+            {ventas.funnel.map((item) => {
+              const pct = ventas.funnel.length > 0
+                ? Math.round((item.total / Math.max(...ventas.funnel.map(f => f.total))) * 100)
+                : 0
+              return (
+                <div key={item.estado}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-300 capitalize">{item.estado}</span>
+                    <span className="text-slate-400">
+                      {item.total} · {currency(item.monto)}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-teal-500 transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            {ventas.funnel.length === 0 && (
+              <p className="text-slate-500 text-sm">Sin datos de funnel</p>
+            )}
           </div>
         </div>
       </div>

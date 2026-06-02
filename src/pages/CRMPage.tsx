@@ -1200,7 +1200,7 @@ export function CRMPage() {
             className="fixed inset-0 bg-black/40 z-30 md:hidden"
             onClick={handleCloseSidebar}
           />
-          <div className="fixed md:static right-0 top-0 h-full md:h-auto w-full md:w-[30%] min-w-[380px] max-w-[640px] z-40 md:z-auto bg-slate-900 border-l border-slate-700 flex flex-col overflow-y-auto shadow-2xl">
+          <div className="fixed md:static right-0 top-0 h-full md:h-auto w-full md:w-[30%] md:min-w-[380px] max-w-[640px] z-40 md:z-auto bg-slate-900 border-l border-slate-700 flex flex-col overflow-y-auto shadow-2xl">
             {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Header */}

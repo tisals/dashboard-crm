@@ -1,17 +1,5 @@
-export interface KPI {
-  total_oportunidades: number
-  tasa_conversion: number
-  ventas_mes: number
-  nuevos_leads_mes: number
-}
-
 export interface OportunidadPorEstado {
   estado: string
-  total: number
-}
-
-export interface VentaSemanal {
-  semana: string
   total: number
 }
 
@@ -25,10 +13,37 @@ export interface Actividad {
   autor: string | null
 }
 
-export interface DashboardData {
-  kpi: KPI
+export interface ProspectosData {
+  nuevos_leads_mes: number
+  tasa_conversion: number
+  entidades_por_mes: Record<string, number>
+  entidades_convertidas_mes: Record<string, number>
   oportunidades_por_estado: OportunidadPorEstado[]
-  ventas_4_semanas: VentaSemanal[]
+}
+
+export interface FunnelItem {
+  estado: string
+  total: number
+  monto: number
+}
+
+export interface VentasData {
+  ventas_mes: number
+  ventas_por_mes: Record<string, number>
+  ltv: number
+  funnel: FunnelItem[]
+}
+
+export interface ChartData {
+  meses: string[]
+  entidades_convertidas: number[]
+  ventas: number[]
+}
+
+export interface DashboardData {
+  prospectos: ProspectosData
+  ventas: VentasData
+  chart: ChartData
   actividades_recientes: Actividad[]
 }
 
