@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   TrendingUp,
@@ -6,8 +6,8 @@ import {
   DollarSign,
   Target,
 } from 'lucide-react'
-import { getDashboard } from '../api/crmApi'
-import type { DashboardData } from '../api/types'
+import { getDashboard, getUsuarios } from '../api/crmApi'
+import type { DashboardData, Usuario } from '../api/types'
 import {
   BarChart,
   Bar,
@@ -15,7 +15,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
   Line,
   CartesianGrid,
   ComposedChart,
@@ -49,16 +48,29 @@ function currency(value: number) {
 }
 
 export function DashboardPage() {
+  const [comercialId, setComercialId] = useState<number | undefined>()
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
+
+  const { data: usuariosData } = useQuery({
+    queryKey: ['usuarios'],
+    queryFn: () => getUsuarios({ per_page: 100 }),
+  })
+  const usuarios = usuariosData?.data?.data ?? []
+
+  const filtros = { comercial_id: comercialId, fecha_inicio: fechaInicio || undefined, fecha_fin: fechaFin || undefined }
+
   const { data, isLoading, error } = useQuery<DashboardData>({
-    queryKey: ['dashboard'],
-    queryFn: getDashboard,
+    queryKey: ['dashboard', filtros],
+    queryFn: () => getDashboard(filtros),
   })
 
-  const ventasPorMes = useMemo(() => {
+  const oportunidadesPorMes = useMemo(() => {
     if (!data) return []
-    return Object.entries(data.ventas.ventas_por_mes).map(([mes, total]) => ({
+    return data.chart.meses.map(mes => ({
       mes,
-      ventas: total,
+      prospectos: data.prospectos.entidades_por_mes[mes] ?? 0,
+      oportunidades: data.prospectos.oportunidades_por_mes[mes] ?? 0,
     }))
   }, [data])
 
@@ -125,6 +137,49 @@ export function DashboardPage() {
         <p className="text-slate-400">Resumen de tu actividad</p>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 items-end">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Comercial</label>
+          <select
+            value={comercialId ?? ''}
+            onChange={e => setComercialId(e.target.value ? Number(e.target.value) : undefined)}
+            className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm min-w-[180px]"
+          >
+            <option value="">Todos</option>
+            {usuarios.map(u => (
+              <option key={u.id} value={u.id}>{u.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Desde</label>
+          <input
+            type="date"
+            value={fechaInicio}
+            onChange={e => setFechaInicio(e.target.value)}
+            className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Hasta</label>
+          <input
+            type="date"
+            value={fechaFin}
+            onChange={e => setFechaFin(e.target.value)}
+            className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        {(comercialId || fechaInicio || fechaFin) && (
+          <button
+            onClick={() => { setComercialId(undefined); setFechaInicio(''); setFechaFin('') }}
+            className="text-sm text-slate-400 hover:text-slate-200 px-2 py-2"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiItems.map((item) => {
@@ -159,18 +214,19 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Ventas por Mes */}
+        {/* Oportunidades por Mes */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Ventas por Mes</h3>
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Oportunidades por Mes</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={ventasPorMes}>
+              <BarChart data={oportunidadesPorMes}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [currency(value), 'Ventas']} />
-                <Line type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={{ fill: '#14b8a6', r: 4 }} />
-              </LineChart>
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="prospectos" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Prospectos" />
+                <Bar dataKey="oportunidades" fill="#14b8a6" radius={[4, 4, 0, 0]} name="Oportunidades" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

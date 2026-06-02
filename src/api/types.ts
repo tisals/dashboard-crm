@@ -18,6 +18,7 @@ export interface ProspectosData {
   tasa_conversion: number
   entidades_por_mes: Record<string, number>
   entidades_convertidas_mes: Record<string, number>
+  oportunidades_por_mes: Record<string, number>
   oportunidades_por_estado: OportunidadPorEstado[]
 }
 

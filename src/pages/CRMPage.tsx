@@ -38,8 +38,9 @@ import {
   updateDetalleOportunidad,
   getProductos,
   getMaestros,
+  getEntidadUsuarios,
 } from '../api/crmApi'
-import type { Oportunidad, OportunidadEstado, Entidad, DetalleOportunidadBackend, Producto, Maestro } from '../api/types'
+import type { Oportunidad, OportunidadEstado, Entidad, DetalleOportunidadBackend, Producto, Maestro, Usuario } from '../api/types'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { CotizacionEditor } from '../components/CotizacionEditor'
 import { DetalleLineEditor, type LineaForm } from '../components/DetalleLineEditor'
@@ -846,6 +847,14 @@ export function CRMPage() {
     enabled: !!selectedOpp?.entidad_id,
   })
 
+  // Fetch comerciales asignados a la entidad
+  const { data: entidadUsuariosData } = useQuery({
+    queryKey: ['entidad-usuarios', selectedOpp?.entidad_id],
+    queryFn: () => getEntidadUsuarios(selectedOpp!.entidad_id),
+    enabled: !!selectedOpp?.entidad_id,
+  })
+  const comerciales = entidadUsuariosData?.data ?? []
+
   // Fetch seguimientos for timeline
   const { data: timelineSegData } = useQuery({
     queryKey: ['seguimientos', 'timeline', selectedOportunidadId],
@@ -1251,6 +1260,28 @@ export function CRMPage() {
                 <p className="text-slate-200 font-medium">{selectedOpp.entidad_nombre ?? `#${selectedOpp.entidad_id}`}</p>
                 {selectedOpp.entidad_identificacion && (
                   <p className="text-slate-400 text-sm mt-1">{selectedOpp.entidad_identificacion}</p>
+                )}
+              </div>
+
+              {/* Comercial(es) Asignado(s) */}
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <h3 className="text-sm font-medium text-slate-400 mb-2">Comercial(es) Asignado(s)</h3>
+                {comerciales.length === 0 ? (
+                  <p className="text-slate-500 text-sm">Sin comercial asignado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {comerciales.map((u: Usuario) => (
+                      <div key={u.id} className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-teal-600/20 flex items-center justify-center">
+                          <span className="text-xs font-bold text-teal-400">{u.nombre.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-slate-200 text-sm font-medium">{u.nombre}</p>
+                          <p className="text-slate-500 text-xs">{u.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 

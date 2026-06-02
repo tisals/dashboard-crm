@@ -74,8 +74,8 @@ export async function login(payload: { email: string; password: string }) {
 
 // ── Dashboard ────────────────────────────────────
 
-export async function getDashboard(): Promise<DashboardData> {
-  const { data } = await crmApi.get<ApiResponse<DashboardData>>('/dashboard')
+export async function getDashboard(params?: { comercial_id?: number; fecha_inicio?: string; fecha_fin?: string }): Promise<DashboardData> {
+  const { data } = await crmApi.get<ApiResponse<DashboardData>>('/dashboard', { params })
   if (!data.success || !data.data) {
     throw new Error(data.error ?? 'Error al obtener dashboard')
   }
@@ -452,6 +452,13 @@ export async function deleteUsuario(id: number) {
 
 export async function getRoles(params?: { per_page?: number }) {
   const { data } = await crmApi.get<ApiResponse<{ data: { id: number; nombre: string }[]; total: number }>>('/roles', { params })
+  return data
+}
+
+// ── Entidad Usuarios (comerciales asignados) ──────
+
+export async function getEntidadUsuarios(entidadId: number) {
+  const { data } = await crmApi.get<ApiResponse<Usuario[]>>(`/entidad/${entidadId}/usuarios`)
   return data
 }
 
