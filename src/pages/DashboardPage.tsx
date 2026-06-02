@@ -20,6 +20,15 @@ import {
   ComposedChart,
 } from 'recharts'
 
+// Default filter dates
+const now = new Date();
+const defaultStart = `${now.getFullYear()}-01-01`;
+const defaultEnd = now.toISOString().split('T')[0];
+
+const [comercialId, setComercialId] = useState<number | undefined>();
+const [fechaInicio, setFechaInicio] = useState(defaultStart);
+const [fechaFin, setFechaFin] = useState(defaultEnd);
+
 const ACTIVITY_ICONS: Record<string, string> = {
   llamada: '📞',
   email: '📧',
@@ -45,6 +54,10 @@ const tooltipStyle = {
 
 function currency(value: number) {
   return `$${value.toLocaleString('es-CO')}`
+}
+
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
 }
 
 export function DashboardPage() {
@@ -198,18 +211,54 @@ export function DashboardPage() {
 
       {/* Charts row 1 */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Oportunidades por estado */}
+        {/* Funnel de Ventas con formato $###.### */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Oportunidades por Estado</h3>
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Funnel de Ventas</h3>
+          <div className="space-y-2">
+            {ventas.funnel.map((item) => {
+              const pct = ventas.funnel.length > 0
+                ? Math.round((item.total / Math.max(...ventas.funnel.map(f => f.total))) * 100)
+                : 0
+              return (
+                <div key={item.estado}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-300 capitalize">{item.estado}</span>
+                    <span className="text-slate-400">
+                      {item.total} · {formatCurrency(item.monto)}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-teal-500 transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            {ventas.funnel.length === 0 && (
+              <p className="text-slate-500 text-sm">Sin datos de funnel</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts row 2 */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Clientes Nuevos + Ventas (12 meses) */}
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Clientes Nuevos vs Ventas</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={prospectos.oportunidades_por_estado}>
+              <ComposedChart data={chartCombo}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="estado" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
+                <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="total" fill="#14b8a6" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Bar yAxisId="left" dataKey="clientes" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Clientes" />
+                <Line yAxisId="right" type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={false} name="Ventas" />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -227,27 +276,6 @@ export function DashboardPage() {
                 <Tooltip contentStyle={tooltipStyle} />
                 <Bar yAxisId="left" dataKey="prospectos" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Prospectos" />
                 <Line yAxisId="right" type="monotone" dataKey="monto" stroke="#f59e0b" strokeWidth={2} dot={false} name="Monto" />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts row 2 */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Clientes convertidos + Ventas (12 meses) */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Clientes Nuevos vs Ventas</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartCombo}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
-                <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar yAxisId="left" dataKey="clientes" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Clientes" />
-                <Line yAxisId="right" type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={false} name="Ventas" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
