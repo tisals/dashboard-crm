@@ -42,10 +42,18 @@ export interface ChartData {
   ventas: number[]
 }
 
+export interface ComercialVenta {
+  id: number
+  nombre: string
+  oportunidades_count: number
+  total_ventas: number
+}
+
 export interface DashboardData {
   prospectos: ProspectosData
   ventas: VentasData
   chart: ChartData
+  comerciales_ventas: ComercialVenta[]
   actividades_recientes: Actividad[]
 }
 

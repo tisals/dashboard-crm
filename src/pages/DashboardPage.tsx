@@ -112,7 +112,7 @@ export function DashboardPage() {
     )
   }
 
-  const { prospectos, ventas, actividades_recientes } = data
+  const { prospectos, ventas, comerciales_ventas, actividades_recientes } = data
 
   const kpiItems = [
     {
@@ -276,33 +276,63 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Ventas por Comercial */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Actividad Reciente</h3>
-          <div className="space-y-3">
-            {actividades_recientes.length === 0 && (
-              <p className="text-slate-500 text-sm">Sin actividad reciente.</p>
-            )}
-            {actividades_recientes.slice(0, 8).map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl"
-              >
-                <span className="text-lg">{ACTIVITY_ICONS[activity.tipo] ?? '📌'}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-slate-200 text-sm truncate">
-                    {activity.notas ?? `${activity.tipo}`}
-                    {activity.oportunidad_codigo && (
-                      <span className="text-teal-400 ml-1">— {activity.oportunidad_codigo}</span>
-                    )}
-                  </p>
-                  <p className="text-slate-500 text-xs">
-                    {activity.autor ?? 'Sistema'} · {timeAgo(activity.fecha)}
-                  </p>
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Ventas por Comercial</h3>
+          <div className="space-y-4">
+            {comerciales_ventas.map((c) => {
+              const maxVentas = Math.max(...comerciales_ventas.map(cv => cv.total_ventas), 1)
+              const pct = Math.round((c.total_ventas / maxVentas) * 100)
+              return (
+                <div key={c.id}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-300 font-medium">{c.nombre}</span>
+                    <span className="text-slate-400">
+                      {c.oportunidades_count} opps · {currency(c.total_ventas)}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-violet-500 transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
+            {comerciales_ventas.length === 0 && (
+              <p className="text-slate-500 text-sm">Sin datos de ventas por comercial</p>
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Actividad Reciente (100% width) */}
+      <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+        <h3 className="text-lg font-semibold text-slate-200 mb-4">Actividad Reciente</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {actividades_recientes.length === 0 && (
+            <p className="text-slate-500 text-sm col-span-2">Sin actividad reciente.</p>
+          )}
+          {actividades_recientes.slice(0, 10).map((activity) => (
+            <div
+              key={activity.id}
+              className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl"
+            >
+              <span className="text-lg">{ACTIVITY_ICONS[activity.tipo] ?? '📌'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-200 text-sm truncate">
+                  {activity.notas ?? `${activity.tipo}`}
+                  {activity.oportunidad_codigo && (
+                    <span className="text-teal-400 ml-1">— {activity.oportunidad_codigo}</span>
+                  )}
+                </p>
+                <p className="text-slate-500 text-xs">
+                  {activity.autor ?? 'Sistema'} · {timeAgo(activity.fecha)}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
