@@ -663,7 +663,8 @@ export function CRMPage() {
     queryKey: ['pipelines'],
     queryFn: getPipelines,
   })
-  const pipelines = pipelinesRes?.data ?? []
+  const pipelinesRaw = pipelinesRes?.data ?? []
+  const pipelines = Array.isArray(pipelinesRaw) ? pipelinesRaw : Object.values(pipelinesRaw)
 
   const selectedPipeline = useMemo(() => {
     if (!pipelines || pipelines.length === 0) return null
@@ -681,7 +682,10 @@ export function CRMPage() {
       Perdida: 'bg-gray-600',
     } as Record<string, string>
 
-    return selectedPipeline.etapas.map((etapa: any) => ({
+    const etapasRaw = selectedPipeline.etapas
+    const etapas = Array.isArray(etapasRaw) ? etapasRaw : Object.values(etapasRaw)
+
+    return etapas.map((etapa: any) => ({
       id: etapa.nombre,
       label: etapa.nombre,
       color: colors[etapa.nombre] ?? 'bg-slate-600',
