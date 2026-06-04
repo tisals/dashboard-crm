@@ -40,12 +40,8 @@ export function ProductosPage() {
   }
 
   function formatPrice(price?: number): string {
-    if (price == null) return '—'
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-    }).format(price)
+    if (price == null) return '$0'
+    return `$${Number(price).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
   }
 
   return (

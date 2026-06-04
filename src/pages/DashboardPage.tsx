@@ -48,11 +48,11 @@ const tooltipStyle = {
 }
 
 function currency(value: number) {
-  return `$${value.toLocaleString('es-CO')}`
+  return `$${value.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function formatCurrency(value: number) {
-  return `$${value.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+  return `$${value.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 export function DashboardPage() {

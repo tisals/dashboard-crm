@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Plus, Search, ArrowLeft, X, Mail, Phone, Pencil, ChevronDown } from 'lucide-react'
-import { getEntidades, getContactos, getSeguimientos, getOportunidades, deleteContacto } from '../api/crmApi'
+import { useQuery, useInfiniteQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { Building2, Plus, Search, ArrowLeft, X, Mail, Phone, Pencil, ChevronDown, Trash2 } from 'lucide-react'
+import { getEntidades, getContactos, getSeguimientos, getOportunidades, deleteContacto, deleteEntidad } from '../api/crmApi'
+import { useAuth } from '../context/AuthContext'
 import { ContactCard } from '../components/ContactCard'
 import { ContactoFormModal } from '../components/ContactoFormModal'
 import { EntidadFormModal } from '../components/EntidadFormModal'
@@ -22,6 +23,23 @@ export function DirectorioPage() {
   const [showContactoForm, setShowContactoForm] = useState(false)
   const [editContacto, setEditContacto] = useState<Contacto | null>(null)
   const queryClient = useQueryClient()
+
+  const { user } = useAuth()
+  const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
+
+  const deleteEntidadMut = useMutation({
+    mutationFn: deleteEntidad,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidades'] })
+      setSelectedEntityId(null)
+    },
+  })
+
+  function handleDeleteEntidad(ent: Entidad) {
+    if (window.confirm(`¿Estás seguro de eliminar la entidad ${ent.nombre}?`)) {
+      deleteEntidadMut.mutate(ent.id)
+    }
+  }
 
   useEffect(() => {
     const urlSearch = searchParams.get('search')
@@ -259,9 +277,20 @@ export function DirectorioPage() {
                 setShowEditEntidad(true)
               }}
               className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+              title="Editar"
             >
               <Pencil size={18} />
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => handleDeleteEntidad(selectedEntity)}
+                disabled={deleteEntidadMut.isPending}
+                className="p-2 rounded-lg hover:bg-red-500/10 text-red-400"
+                title="Eliminar entidad"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
           </div>
 
           {/* Entity Info */}
@@ -347,13 +376,13 @@ export function DirectorioPage() {
                       setEditContacto(c)
                       setShowContactoForm(true)
                     }}
-                    onDelete={(c) => {
+                    onDelete={isAdmin ? (c) => {
                       if (window.confirm(`¿Eliminar contacto ${c.nombres} ${c.apellidos}?`)) {
                         deleteContacto(c.id).then(() => {
                           queryClient.invalidateQueries({ queryKey: ['contactos'] })
                         })
                       }
-                    }}
+                    } : undefined}
                   />
                 ))
               )}

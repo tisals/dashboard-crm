@@ -165,6 +165,16 @@ export async function ganarOportunidad(id: number) {
   return data
 }
 
+export async function versionarOportunidad(id: number) {
+  const { data } = await crmApi.post<ApiResponse<Oportunidad>>(`/oportunidades/${id}/version`)
+  return data
+}
+
+export async function getPipelines() {
+  const { data } = await crmApi.get<ApiResponse<any[]>>('/pipelines')
+  return data
+}
+
 // Update only estado (Kanban drag)
 export async function updateOportunidadEstado(id: number, estado: string) {
   const { data } = await crmApi.put<ApiResponse<Oportunidad>>(`/oportunidades/${id}`, { estado })

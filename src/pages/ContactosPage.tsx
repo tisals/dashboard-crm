@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown, MessageSquare } from 'lucide-react'
 import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto, getSeguimientos } from '../api/crmApi'
+import { useAuth } from '../context/AuthContext'
 import { SlidePanel } from '../components/SlidePanel'
 import { Contacto, Entidad } from '../api/types'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 
 export function ContactosPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
+
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [entidadFilter, setEntidadFilter] = useState<number | null>(null)
@@ -192,10 +196,12 @@ export function ContactosPage() {
                     <UserPlus size={14} />
                   </button>
                 )}
-                <button onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
-                  className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition-colors" title="Eliminar">
-                  <Trash2 size={14} />
-                </button>
+                {isAdmin && (
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                    className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition-colors" title="Eliminar">
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
