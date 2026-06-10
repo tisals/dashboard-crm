@@ -134,9 +134,10 @@ function OportunidadCard({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const refTags = (oportunidad as any).detalles
+  const detallesArr = (oportunidad as any).detalles
+  const refTags = Array.isArray(detallesArr)
     ? (Array.from(
-        new Set((oportunidad as any).detalles.map((d: any) => d.producto?.referencia ?? '').filter(Boolean))
+        new Set(detallesArr.map((d: any) => d.producto?.referencia ?? '').filter(Boolean))
       ) as string[])
     : []
 
@@ -653,7 +654,7 @@ function BulkMoveModal({
               className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
             >
               <option value="">Seleccionar pipeline...</option>
-              {pipelines.map((p: any) => (
+              {(pipelines ?? []).map((p: any) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
@@ -761,10 +762,10 @@ export function CRMPage() {
 
   const productos = productosRes?.data?.data ?? []
 
-  const pipelines = contextPipelines
+  const pipelines = Array.isArray(contextPipelines) ? contextPipelines : []
 
   const selectedPipeline = useMemo(() => {
-    if (!pipelines || pipelines.length === 0) return null
+    if (pipelines.length === 0) return null
     return pipelines.find((p: any) => String(p.id) === selectedPipelineId) || pipelines[0]
   }, [pipelines, selectedPipelineId])
 
@@ -1425,7 +1426,8 @@ export function CRMPage() {
                 </tr>
               )}
               {oportunidades.map(op => {
-                const detalles = (op as any).detalles ?? []
+                const detallesArr2 = (op as any).detalles
+                const detalles = Array.isArray(detallesArr2) ? detallesArr2 : []
                 const tags: string[] = Array.from(new Set(detalles.map((d: any) => d.producto?.referencia ?? '').filter(Boolean)))
                 return (
                 <tr 
