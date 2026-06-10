@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useOutletContext } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
@@ -18,10 +17,11 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, Search, X, Copy, Check, LayoutList, Kanban, Phone, Mail, MessageSquare, Calendar, CalendarDays, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { Search, X, Copy, Check, Phone, Mail, MessageSquare, Calendar, CalendarDays, ChevronDown, ChevronRight, Trash2, Pencil, FileText, ArrowRight } from 'lucide-react'
+import { CommonCard } from '../components/CommonCard'
 import {
   getOportunidades,
-  updateOportunidadEstado,
+  updateOportunidadPipelineEtapa,
   createOportunidad,
   clonarOportunidad,
   ganarOportunidad,
@@ -41,10 +41,11 @@ import {
   getEntidadUsuarios,
   deleteOportunidad,
   versionarOportunidad,
-  getPipelines,
+  bulkMoveOportunidades,
 } from '../api/crmApi'
 import { useAuth } from '../context/AuthContext'
 import type { Oportunidad, OportunidadEstado, Entidad, DetalleOportunidadBackend, Producto, Maestro, Usuario, DetalleOportunidadCreate } from '../api/types'
+import type { CRMLayoutContext } from './CRMLayout'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { CotizacionEditor } from '../components/CotizacionEditor'
 import { DetalleLineEditor, type LineaForm } from '../components/DetalleLineEditor'
@@ -54,17 +55,11 @@ import { SlidePanel } from '../components/SlidePanel'
 import { SendQuoteModal } from '../components/SendQuoteModal'
 
 // ── Display mapping: maestros name → internal estado string ──
-const ESTADO_MAESTRO_MAP: Record<string, OportunidadEstado> = {
-  'Borrador': 'Borrador',
-  'Enviado': 'Enviada',
-  'En negociación': 'Aceptada',
-  'Ganado': 'Ganada',
-  'Perdido': 'Perdida',
-}
+
 
 // ── Types ────────────────────────────────────────
 
-type ColumnId = OportunidadEstado
+type ColumnId = string
 
 interface Column {
   id: ColumnId
@@ -84,10 +79,6 @@ function buildColumns(maestrosEstado: Maestro[]): Column[] {
   // Maestros con nombre directo (ej: "Borrador" → "Borrador")
   for (const est of internalEstados) {
     nameToInternal[est] = est
-  }
-  // Maestros con nombre mapeado (ej: "En negociación" → "Aceptada")
-  for (const [nombreMaestro, estadoInterno] of Object.entries(ESTADO_MAESTRO_MAP)) {
-    nameToInternal[nombreMaestro] = estadoInterno
   }
 
   // Recorrer maestros reales y crear columnas
@@ -112,15 +103,21 @@ function buildColumns(maestrosEstado: Maestro[]): Column[] {
 function OportunidadCard({
   oportunidad,
   onClone,
+  onVersionar,
   onGanar,
   onDelete,
   onClick,
+  selected,
+  onToggleSelect,
 }: {
   oportunidad: Oportunidad
   onClone: (id: number) => void
+  onVersionar: (id: number) => void
   onGanar: (id: number) => void
   onDelete?: (id: number) => void
   onClick?: () => void
+  selected?: boolean
+  onToggleSelect?: (id: number) => void
 }) {
   const {
     attributes,
@@ -137,79 +134,89 @@ function OportunidadCard({
     opacity: isDragging ? 0.5 : 1,
   }
 
+  const refTags = (oportunidad as any).detalles
+    ? (Array.from(
+        new Set((oportunidad as any).detalles.map((d: any) => d.producto?.referencia ?? '').filter(Boolean))
+      ) as string[])
+    : []
+
+  const formattedValor = oportunidad.valor != null && oportunidad.valor > 0
+    ? `$${Number(oportunidad.valor).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : 'Sin valor'
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
-      className="bg-slate-700 p-3 rounded-xl cursor-grab active:cursor-grabbing hover:bg-slate-600 transition-colors group"
+      className="cursor-grab active:cursor-grabbing"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <p className="font-medium text-slate-200 text-sm">{oportunidad.codigo}</p>
-            {oportunidad.valor != null && oportunidad.valor > 0 && (
-              <span className="text-xs font-semibold text-teal-400">
-                ${Number(oportunidad.valor).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-            )}
-          </div>
-          <p className="text-slate-400 text-xs truncate">
-            {oportunidad.entidad_nombre ?? `#${oportunidad.entidad_id}`}
-          </p>
-          <p className="text-slate-500 text-[10px] truncate">
-            {oportunidad.entidad_identificacion ?? ''}
-          </p>
-          {oportunidad.updated_at && (
-            <p className="text-slate-500 text-[10px] mt-0.5">
-              {new Date(oportunidad.updated_at).toLocaleDateString('es-ES')}
-            </p>
-          )}
-          {/* Product tags — show referencia only */}
-          {(oportunidad as any).detalles && (oportunidad as any).detalles.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {(Array.from(new Set((oportunidad as any).detalles.map((d: any) => d.producto?.referencia ?? '').filter(Boolean))) as string[]).slice(0, 3).map((tag, i) => (
-                <span key={i} className="px-1.5 py-0.5 bg-slate-600 rounded text-[10px] text-slate-300 truncate max-w-24">
-                  {tag}
-                </span>
-              ))}
-              {(oportunidad as any).detalles.length > 3 && (
-                <span className="px-1.5 py-0.5 bg-slate-600 rounded text-[10px] text-slate-400">
-                  +{(oportunidad as any).detalles.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); onClone(oportunidad.id) }}
-            title="Clonar"
-            className="p-2 md:p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-teal-400"
+      <div className="relative">
+        {onToggleSelect && (
+          <div
+            className="absolute top-2 left-2 z-10"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
-            <Copy size={16} />
-          </button>
-          {oportunidad.estado === 'Aceptada' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onGanar(oportunidad.id) }}
-              title="Marcar como ganada"
-              className="p-2 md:p-1.5 rounded-lg hover:bg-emerald-900 text-slate-400 hover:text-emerald-400"
-            >
-              <Check size={16} />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(oportunidad.id) }}
-              title="Eliminar"
-              className="p-2 md:p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
+            <input
+              type="checkbox"
+              checked={!!selected}
+              onChange={() => onToggleSelect(oportunidad.id)}
+              className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-teal-600 focus:ring-teal-500 cursor-pointer"
+            />
+          </div>
+        )}
+        <CommonCard
+          onClick={onClick}
+          title={oportunidad.codigo}
+          subtitle={formattedValor}
+          info1={{ text: oportunidad.entidad_nombre ?? `#${oportunidad.entidad_id}` }}
+          info2={oportunidad.updated_at ? { text: new Date(oportunidad.updated_at).toLocaleDateString('es-ES') } : undefined}
+          tags={refTags.slice(0, 3).map(tag => ({ label: tag, variant: 'slate' as const }))}
+          menuItems={[
+            ...(oportunidad.estado === 'Aceptada' ? [{
+              icon: <Check size={14} />,
+              label: 'Marcar ganada',
+              onClick: () => onGanar(oportunidad.id)
+            }] : []),
+            {
+              icon: <Pencil size={14} />,
+              label: 'Editar / Detalles',
+              onClick: () => onClick?.()
+            },
+            {
+              icon: <FileText size={14} />,
+              label: 'Ver PDF',
+              onClick: () => {
+                const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8001/api/v1'
+                const token = localStorage.getItem('auth_token')
+                fetch(`${base}/oportunidades/${oportunidad.id}/pdf`, {
+                  headers: { 'Authorization': `Bearer ${token}` },
+                })
+                  .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.blob() })
+                  .then(blob => { const url = URL.createObjectURL(blob); window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 10000) })
+                  .catch(err => console.error('Error al descargar PDF:', err))
+              }
+            },
+            {
+              icon: <Copy size={14} />,
+              label: 'Duplicar',
+              onClick: () => onClone(oportunidad.id)
+            },
+            {
+              icon: <Copy size={14} />,
+              label: 'Nueva Versión',
+              onClick: () => onVersionar(oportunidad.id)
+            },
+            ...(onDelete ? [{
+              icon: <Trash2 size={14} />,
+              label: 'Eliminar',
+              onClick: () => onDelete(oportunidad.id),
+              danger: true
+            }] : [])
+          ]}
+        />
       </div>
     </div>
   )
@@ -221,16 +228,22 @@ function KanbanColumn({
   column,
   oportunidades,
   onClone,
+  onVersionar,
   onGanar,
   onDelete,
   onCardClick,
+  selectedOppIds,
+  onToggleSelect,
 }: {
   column: Column
   oportunidades: Oportunidad[]
   onClone: (id: number) => void
+  onVersionar: (id: number) => void
   onGanar: (id: number) => void
   onDelete?: (id: number) => void
   onCardClick?: (id: number) => void
+  selectedOppIds?: Set<number>
+  onToggleSelect?: (id: number) => void
 }) {
   const { setNodeRef } = useDroppable({ id: column.id })
   const totalMonto = oportunidades.reduce((sum, op) => sum + (Number(op.valor) || 0), 0)
@@ -259,9 +272,12 @@ function KanbanColumn({
               key={op.id}
               oportunidad={op}
               onClone={onClone}
+              onVersionar={onVersionar}
               onGanar={onGanar}
               onDelete={onDelete}
               onClick={() => onCardClick?.(op.id)}
+              selected={selectedOppIds?.has(op.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
           {oportunidades.length === 0 && (
@@ -289,10 +305,9 @@ interface FilterBarProps {
   entidadName?: string
   productos?: Producto[]
   estadosOptions: Column[]
-  pipelines?: any[]
 }
 
-function FilterBar({ filters, onChange, entidadName, productos, estadosOptions, pipelines }: FilterBarProps) {
+function FilterBar({ filters, onChange, entidadName, productos, estadosOptions }: FilterBarProps) {
   const [showEntidadSearch, setShowEntidadSearch] = useState(false)
   const [entidadSearch, setEntidadSearch] = useState('')
   const [entidadResults, setEntidadResults] = useState<Entidad[]>([])
@@ -327,18 +342,6 @@ function FilterBar({ filters, onChange, entidadName, productos, estadosOptions, 
           className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
         />
       </div>
-
-      {/* Pipeline / Flujo */}
-      <select
-        value={filters.pipeline_id}
-        onChange={e => onChange({ ...filters, pipeline_id: e.target.value })}
-        className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-      >
-        <option value="">Todos los flujos</option>
-        {(pipelines ?? []).map(p => (
-          <option key={p.id} value={String(p.id)}>{p.nombre}</option>
-        ))}
-      </select>
 
       {/* Estado */}
       <select
@@ -608,18 +611,112 @@ function NuevaOportunidadModal({
   )
 }
 
+// ── Bulk Move Modal ──────────────────────────────
+
+function BulkMoveModal({
+  selectedCount,
+  pipelines,
+  onClose,
+  onMove,
+  loading,
+}: {
+  selectedCount: number
+  pipelines: any[]
+  onClose: () => void
+  onMove: (targetPipelineEtapaId: number) => void
+  loading: boolean
+}) {
+  const [selectedPipelineId, setSelectedPipelineId] = useState<number | null>(null)
+  const [selectedEtapaId, setSelectedEtapaId] = useState<number | null>(null)
+
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId)
+  const etapas = selectedPipeline?.etapas
+    ? (Array.isArray(selectedPipeline.etapas) ? selectedPipeline.etapas : Object.values(selectedPipeline.etapas))
+    : []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-slate-200 mb-2">Mover {selectedCount} oportunidad{selectedCount !== 1 ? 'es' : ''}</h3>
+        <p className="text-sm text-slate-400 mb-4">Seleccioná el pipeline y la etapa de destino</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Pipeline</label>
+            <select
+              value={selectedPipelineId ?? ''}
+              onChange={e => {
+                const id = e.target.value ? Number(e.target.value) : null
+                setSelectedPipelineId(id)
+                setSelectedEtapaId(null)
+              }}
+              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+            >
+              <option value="">Seleccionar pipeline...</option>
+              {pipelines.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Etapa</label>
+            <select
+              value={selectedEtapaId ?? ''}
+              onChange={e => setSelectedEtapaId(e.target.value ? Number(e.target.value) : null)}
+              disabled={!selectedPipelineId}
+              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500 disabled:opacity-50"
+            >
+              <option value="">Seleccionar etapa...</option>
+              {etapas.map((e: any) => (
+                <option key={e.id} value={e.id}>{e.nombre}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => selectedEtapaId && onMove(selectedEtapaId)}
+            disabled={!selectedEtapaId || loading}
+            className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors"
+          >
+            {loading ? 'Moviendo...' : 'Mover'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ────────────────────────────────────
 
 export function CRMPage() {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
+  const {
+    selectedPipelineId,
+    setSelectedPipelineId,
+    pipelines: contextPipelines,
+    view,
+    setView,
+    createSignal,
+  } = useOutletContext<CRMLayoutContext>()
   const [activeId, setActiveId] = useState<number | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [view, setView] = useState<'kanban' | 'list'>('kanban')
   const [selectedOportunidadId, setSelectedOportunidadId] = useState<number | null>(null)
   const [showSeguimientoModal, setShowSeguimientoModal] = useState(false)
   const [showSendQuoteModal, setShowSendQuoteModal] = useState(false)
   const [seguimientoContacto, setSeguimientoContacto] = useState<{ id: number; nombre: string } | null>(null)
+  const [selectedOppIds, setSelectedOppIds] = useState<Set<number>>(new Set())
+  const [showBulkMove, setShowBulkMove] = useState(false)
+  const [bulkTargetEtapaId, setBulkTargetEtapaId] = useState<number | null>(null)
   const { user } = useAuth()
   const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
 
@@ -630,8 +727,13 @@ export function CRMPage() {
     producto_id: '',
     fecha_desde: '',
     fecha_hasta: '',
-    pipeline_id: '',
+    pipeline_id: selectedPipelineId,
   })
+
+  // Sync pipeline from CRMLayout context into filters
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, pipeline_id: selectedPipelineId }))
+  }, [selectedPipelineId])
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -659,17 +761,12 @@ export function CRMPage() {
 
   const productos = productosRes?.data?.data ?? []
 
-  const { data: pipelinesRes } = useQuery({
-    queryKey: ['pipelines'],
-    queryFn: getPipelines,
-  })
-  const pipelinesRaw = pipelinesRes?.data ?? []
-  const pipelines = Array.isArray(pipelinesRaw) ? pipelinesRaw : Object.values(pipelinesRaw)
+  const pipelines = contextPipelines
 
   const selectedPipeline = useMemo(() => {
     if (!pipelines || pipelines.length === 0) return null
-    return pipelines.find((p: any) => String(p.id) === filters.pipeline_id) || pipelines[0]
-  }, [pipelines, filters.pipeline_id])
+    return pipelines.find((p: any) => String(p.id) === selectedPipelineId) || pipelines[0]
+  }, [pipelines, selectedPipelineId])
 
   const columns: Column[] = useMemo(() => {
     if (!selectedPipeline?.etapas) return []
@@ -686,11 +783,32 @@ export function CRMPage() {
     const etapas = Array.isArray(etapasRaw) ? etapasRaw : Object.values(etapasRaw)
 
     return etapas.map((etapa: any) => ({
-      id: etapa.nombre,
+      id: String(etapa.id),
       label: etapa.nombre,
       color: colors[etapa.nombre] ?? 'bg-slate-600',
     }))
   }, [selectedPipeline])
+
+  // Custom collision: detect column by pointer X position (ignores card droppables)
+  function kanbanCollisionDetection(args: any) {
+    const { droppableContainers, pointerCoordinates } = args
+    if (!pointerCoordinates) return []
+
+    const { x } = pointerCoordinates
+
+    // Only check column containers (string IDs = etapa IDs)
+    for (const container of droppableContainers) {
+      if (typeof container.id !== 'string') continue
+      const node = container.node?.current
+      if (!node) continue
+      const rect = node.getBoundingClientRect()
+      if (x >= rect.left && x <= rect.right) {
+        return [{ id: container.id, data: { droppableContainer: container } }]
+      }
+    }
+
+    return []
+  }
 
   const currentMonth = useMemo(() => {
     const d = new Date()
@@ -708,6 +826,11 @@ export function CRMPage() {
       setSelectedOportunidadId(Number(oportunidadId))
     }
   }, [searchParams])
+
+  // Open create modal when "Nueva Oportunidad" is clicked in CRMLayout
+  useEffect(() => {
+    if (createSignal > 0) setShowCreateModal(true)
+  }, [createSignal])
 
   const PER_PAGE = 50
 
@@ -751,9 +874,12 @@ export function CRMPage() {
     const map: Record<string, Oportunidad[]> = {}
     for (const col of columns) { map[col.id] = [] }
     for (const op of oportunidades) {
-      const key = op.estado
+      // Group by pipeline_etapa_id (the actual column) instead of estado (legacy)
+      const key = String(op.pipeline_etapa_id ?? '')
       if (map[key]) { map[key].push(op) }
-      else if (map['Borrador']) { map['Borrador'].push(op) }
+      else if (columns.length > 0 && map[columns[0].id]) {
+        map[columns[0].id].push(op)
+      }
     }
     return map
   }, [oportunidades, columns])
@@ -764,12 +890,20 @@ export function CRMPage() {
   )
 
   const updateEstado = useMutation({
-    mutationFn: ({ id, estado }: { id: number; estado: string }) =>
-      updateOportunidadEstado(id, estado),
-    onMutate: async ({ id, estado }) => {
+    mutationFn: ({ id, pipeline_etapa_id }: { id: number; pipeline_etapa_id: number }) =>
+      updateOportunidadPipelineEtapa(id, pipeline_etapa_id),
+    onMutate: async ({ id, pipeline_etapa_id }) => {
       await queryClient.cancelQueries({ queryKey: ['oportunidades'] })
       const previous = queryClient.getQueryData(['oportunidades', filters, sortBy, sortOrder])
 
+      // Find the etapa name for the new pipeline_etapa_id
+      const etapa = selectedPipeline?.etapas
+        ? (Array.isArray(selectedPipeline.etapas) ? selectedPipeline.etapas : Object.values(selectedPipeline.etapas))
+            .find((e: any) => e.id === pipeline_etapa_id)
+        : null
+      const newEstado = etapa?.nombre ?? 'Borrador'
+
+      // Optimistic update: list query
       queryClient.setQueryData(['oportunidades', filters, sortBy, sortOrder], (old: any) => {
         if (!old || !old.pages) return old
         return {
@@ -778,10 +912,20 @@ export function CRMPage() {
             ...page,
             data: {
               ...page.data,
-              data: page.data.data.map((o: any) => o.id === id ? { ...o, estado } : o)
+              data: page.data.data.map((o: any) => o.id === id ? {
+                ...o,
+                pipeline_etapa_id,
+                estado: newEstado  // Also update estado for grouping
+              } : o)
             }
           }))
         }
+      })
+
+      // Optimistic update: individual query too (so sidebar reflects immediately)
+      queryClient.setQueryData(['oportunidades', id], (old: any) => {
+        if (!old?.success) return old
+        return { ...old, data: { ...old.data, pipeline_etapa_id } }
       })
 
       return { previous }
@@ -793,6 +937,7 @@ export function CRMPage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] })
     },
   })
 
@@ -853,6 +998,16 @@ export function CRMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
       queryClient.invalidateQueries({ queryKey: ['oportunidad', selectedOportunidadId] })
+    },
+  })
+
+  const bulkMove = useMutation({
+    mutationFn: bulkMoveOportunidades,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      setSelectedOppIds(new Set())
+      setShowBulkMove(false)
+      setBulkTargetEtapaId(null)
     },
   })
 
@@ -1018,14 +1173,49 @@ export function CRMPage() {
     const activeOp = oportunidades.find(o => o.id === active.id)
     if (!activeOp) return
 
-    const overId = over.id as string
-    // Si el destino es una columna → mover a esa columna
-    const targetColumn = columns.find(c => c.id === overId)?.id
-      // Si el destino es otra tarjeta → mover a la columna de esa tarjeta
-      ?? columns.find(c => byEstado[c.id]?.some((o: Oportunidad) => o.id === Number(overId)))?.id
+    const overId = over.id
+    let targetColumnId: string | null = null
 
-    if (targetColumn && targetColumn !== activeOp.estado) {
-      updateEstado.mutate({ id: activeOp.id, estado: targetColumn })
+    // If over is a column (string ID like "123" = etapa ID)
+    if (typeof overId === 'string') {
+      const col = columns.find(c => c.id === overId)
+      if (col) targetColumnId = col.id
+    }
+
+    // If over is a card (number ID) — find which column that card belongs to
+    if (!targetColumnId && typeof overId === 'number') {
+      const col = columns.find(c => byEstado[c.id]?.some(o => o.id === overId))
+      if (col) targetColumnId = col.id
+    }
+
+    // If over is the same card (dropped on itself) — find which column IT belongs to
+    if (!targetColumnId && overId === active.id) {
+      const col = columns.find(c => byEstado[c.id]?.some(o => o.id === active.id))
+      if (col) targetColumnId = col.id
+    }
+
+    if (targetColumnId) {
+      const targetEtapaId = Number(targetColumnId)
+      if (targetEtapaId && targetEtapaId !== activeOp.pipeline_etapa_id) {
+        updateEstado.mutate({ id: activeOp.id, pipeline_etapa_id: targetEtapaId })
+      }
+    }
+  }
+
+  function handleToggleSelect(id: number) {
+    setSelectedOppIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function handleSelectAll() {
+    if (selectedOppIds.size === oportunidades.length) {
+      setSelectedOppIds(new Set())
+    } else {
+      setSelectedOppIds(new Set(oportunidades.map(o => o.id)))
     }
   }
 
@@ -1126,30 +1316,7 @@ export function CRMPage() {
           <p className="text-slate-400">{totalOpps} oportunidades</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* View toggle */}
-          <div className="flex bg-slate-800 rounded-xl p-1">
-            <button
-              onClick={() => setView('kanban')}
-              className={`p-2 rounded-lg transition-colors ${view === 'kanban' ? 'bg-teal-700 text-teal-300' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Kanban"
-            >
-              <Kanban size={16} />
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-teal-700 text-teal-300' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Lista"
-            >
-              <LayoutList size={16} />
-            </button>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-xl transition-colors"
-          >
-            <Plus size={18} />
-            Nueva Oportunidad
-          </button>
+          {/* Empty — view toggle and create button are now in CRMLayout nav */}
         </div>
       </div>
 
@@ -1159,14 +1326,36 @@ export function CRMPage() {
         onChange={handleFilterChange}
         productos={productos}
         estadosOptions={columns}
-        pipelines={pipelines}
       />
+
+      {/* Bulk Actions Bar */}
+      {selectedOppIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-teal-900/30 border border-teal-700/50 rounded-xl">
+          <span className="text-sm text-teal-300 font-medium">
+            {selectedOppIds.size} seleccionada{selectedOppIds.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex-1" />
+          <button
+            onClick={() => setShowBulkMove(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <ArrowRight size={16} />
+            Mover a pipeline
+          </button>
+          <button
+            onClick={() => setSelectedOppIds(new Set())}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
 
       {/* Kanban */}
       {view === 'kanban' ? (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={kanbanCollisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -1177,9 +1366,12 @@ export function CRMPage() {
                 column={col}
                 oportunidades={byEstado[col.id] ?? []}
                 onClone={(id) => clonar.mutate(id)}
+                onVersionar={(id) => crearVersion.mutate(id)}
                 onGanar={(id) => ganar.mutate(id)}
                 onDelete={isAdmin ? handleDeleteOportunidad : undefined}
                 onCardClick={handleCardClick}
+                selectedOppIds={selectedOppIds}
+                onToggleSelect={handleToggleSelect}
               />
             ))}
           </div>
@@ -1199,6 +1391,14 @@ export function CRMPage() {
           <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-700">
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={oportunidades.length > 0 && selectedOppIds.size === oportunidades.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 text-slate-400 font-medium cursor-pointer hover:text-slate-200 select-none" onClick={() => toggleSort('codigo')}>
                   Código{sortIndicator('codigo')}
                 </th>
@@ -1221,7 +1421,7 @@ export function CRMPage() {
             <tbody>
               {oportunidades.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center px-4 py-8 text-slate-500">Sin oportunidades</td>
+                  <td colSpan={10} className="text-center px-4 py-8 text-slate-500">Sin oportunidades</td>
                 </tr>
               )}
               {oportunidades.map(op => {
@@ -1230,9 +1430,17 @@ export function CRMPage() {
                 return (
                 <tr 
                   key={op.id} 
-                  className="border-b border-slate-700/50 hover:bg-slate-700/30 cursor-pointer"
+                  className={`border-b border-slate-700/50 hover:bg-slate-700/30 cursor-pointer ${selectedOppIds.has(op.id) ? 'bg-teal-900/20' : ''}`}
                   onClick={() => handleCardClick(op.id)}
                 >
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedOppIds.has(op.id)}
+                      onChange={() => handleToggleSelect(op.id)}
+                      className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium text-slate-200">{op.codigo}</td>
                   <td className="px-4 py-3 text-slate-400">{op.entidad_nombre ?? `#${op.entidad_id}`}</td>
                   <td className="px-4 py-3 text-slate-400">{pipelines.find(p => p.id === (op as any).pipeline_id)?.nombre ?? '—'}</td>
@@ -1258,7 +1466,7 @@ export function CRMPage() {
                       op.estado === 'Enviada' ? 'bg-blue-500/20 text-blue-400' :
                       'bg-slate-600 text-slate-300'
                     }`}>
-                      {(() => { const c = columns.find(col => col.id === op.estado); return c ? c.label : op.estado })()}
+                      {(() => { const c = columns.find(col => col.id === String(op.pipeline_etapa_id ?? '')); return c ? c.label : op.estado })()}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -1356,24 +1564,20 @@ export function CRMPage() {
                   <h2 className="text-lg font-bold text-slate-200">{selectedOpp.codigo}</h2>
                   <div className="flex items-center gap-2 mt-1">
                     <select
-                      value={selectedOpp.estado}
+                      value={selectedOpp.pipeline_etapa_id ?? ''}
                       onChange={(e) => {
-                        updateEstado.mutate({ id: selectedOpp.id, estado: e.target.value })
+                        const etapaId = Number(e.target.value)
+                        if (!etapaId) return
+                        updateEstado.mutate({ id: selectedOpp.id, pipeline_etapa_id: etapaId })
                         queryClient.setQueryData(['oportunidades', selectedOportunidadId], (old: any) => {
                           if (!old?.success) return old
-                          return { ...old, data: { ...old.data, estado: e.target.value } }
+                          return { ...old, data: { ...old.data, pipeline_etapa_id: etapaId } }
                         })
                       }}
-                      className={`px-2 py-1 rounded-lg text-xs font-medium border-0 ${
-                        selectedOpp.estado === 'Ganada' ? 'bg-emerald-500/20 text-emerald-400' :
-                        selectedOpp.estado === 'Rechazada' ? 'bg-red-500/20 text-red-400' :
-                        selectedOpp.estado === 'Aceptada' ? 'bg-purple-500/20 text-purple-400' :
-                        selectedOpp.estado === 'Enviada' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-slate-600 text-slate-300'
-                      }`}
+                      className="px-2 py-1 rounded-lg text-xs font-medium border-0 bg-slate-600 text-slate-300"
                     >
-                      {columns.map(col => (
-                        <option key={col.id} value={col.id} className="bg-slate-800 text-slate-200">{col.label}</option>
+                      {selectedPipeline?.etapas && Array.isArray(selectedPipeline.etapas) && selectedPipeline.etapas.map((etapa: any) => (
+                        <option key={etapa.id} value={etapa.id} className="bg-slate-800 text-slate-200">{etapa.nombre}</option>
                       ))}
                     </select>
                   </div>
@@ -1665,6 +1869,22 @@ export function CRMPage() {
             setSeguimientoContacto(null)
           }}
           onLogged={handleSeguimientoLogged}
+        />
+      )}
+
+      {/* Bulk Move Modal */}
+      {showBulkMove && (
+        <BulkMoveModal
+          selectedCount={selectedOppIds.size}
+          pipelines={pipelines}
+          onClose={() => { setShowBulkMove(false); setBulkTargetEtapaId(null) }}
+          onMove={(targetPipelineEtapaId) => {
+            bulkMove.mutate({
+              oportunidad_ids: Array.from(selectedOppIds),
+              target_pipeline_etapa_id: targetPipelineEtapaId,
+            })
+          }}
+          loading={bulkMove.isPending}
         />
       )}
 

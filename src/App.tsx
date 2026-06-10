@@ -12,6 +12,8 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DirectorioPage } from './pages/DirectorioPage'
 import { CRMPage } from './pages/CRMPage'
+import { CRMLayout } from './pages/CRMLayout'
+import { PipelineAdmin } from './pages/PipelineAdmin'
 import { OperacionesPage, FinanzasPage, TalentosPage } from './pages/ModulosPages'
 import { SeguridadDashboardPage } from './pages/SeguridadDashboardPage'
 import { MarcasPage } from './pages/MarcasPage'
@@ -97,7 +99,12 @@ function ProtectedLayout() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/directorio" element={<DirectorioPage />} />
-            <Route path="/crm" element={<CRMPage />} />
+            <Route path="/crm" element={<CRMLayout />}>
+              <Route index element={<Navigate to="/crm/oportunidad" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="pipelines" element={<PipelineAdmin />} />
+              <Route path="oportunidad" element={<CRMPage />} />
+            </Route>
             <Route path="/operaciones" element={<OperacionesPage />} />
             <Route path="/finanzas" element={<FinanzasPage />} />
             <Route path="/talento" element={<TalentosPage />} />

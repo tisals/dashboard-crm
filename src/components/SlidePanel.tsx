@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface SlidePanelProps {
@@ -41,8 +42,8 @@ export function SlidePanel({ open, onClose, title, children, width = 'w-full md:
     )
   }
 
-  // Overlay mode (default)
-  return (
+  // Overlay mode (default) — rendered via Portal to escape parent stacking contexts
+  return createPortal(
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
@@ -60,6 +61,7 @@ export function SlidePanel({ open, onClose, title, children, width = 'w-full md:
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   )
 }

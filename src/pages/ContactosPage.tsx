@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown, MessageSquare } from 'lucide-react'
+import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown, MessageSquare, Phone, Mail } from 'lucide-react'
 import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto, getSeguimientos } from '../api/crmApi'
 import { useAuth } from '../context/AuthContext'
 import { SlidePanel } from '../components/SlidePanel'
 import { Contacto, Entidad } from '../api/types'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
+import { CommonCard } from '../components/CommonCard'
 
 export function ContactosPage() {
   const { user } = useAuth()
@@ -150,60 +151,50 @@ export function ContactosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {contactos.map((c) => (
-            <div key={c.id}
-              className="bg-slate-800 rounded-xl border border-slate-700 p-4 hover:border-slate-600 transition-colors cursor-pointer group"
-              onClick={() => handleView(c)}>
-              {/* Avatar + Name */}
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-teal-700/50 flex items-center justify-center text-teal-400 font-medium text-sm shrink-0">
-                  {c.nombres.charAt(0)}{c.apellidos.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-200 truncate">{c.nombres} {c.apellidos}</p>
-                  {c.cargo && <p className="text-xs text-slate-500 truncate">{c.cargo}</p>}
-                </div>
-              </div>
-
-              {/* Contact info */}
-              <div className="space-y-1 text-xs text-slate-400">
-                {c.email_contacto && <p className="truncate">{c.email_contacto}</p>}
-                {c.movil && <p>{c.movil}</p>}
-              </div>
-
-              {/* Entity badge */}
-              {c.entidad_id && (
-                <div className="mt-3 pt-3 border-t border-slate-700">
-                  <span className="text-xs text-slate-500 bg-slate-700 px-2 py-1 rounded-lg flex items-center gap-1">
-                    <Building2 size={11} />
-                    <span className="truncate">{getEntidadName(c.entidad_id, c.entidad_nombre)}</span>
-                  </span>
-                </div>
-              )}
-
-              {/* Action buttons (visible on hover) */}
-              <div className="mt-3 pt-2 border-t border-slate-700/50 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => { e.stopPropagation(); setSeguimientoContacto(c) }}
-                  className="p-1.5 text-slate-400 hover:text-teal-400 rounded-lg hover:bg-slate-700 transition-colors" title="Registrar seguimiento">
-                  <MessageSquare size={14} />
+            <CommonCard
+              key={c.id}
+              onClick={() => handleView(c)}
+              title={`${c.nombres} ${c.apellidos}`}
+              subtitle={c.cargo ? `${c.cargo}${c.area ? ` · ${c.area}` : ''}` : undefined}
+              avatarText={`${c.nombres.charAt(0)}${c.apellidos.charAt(0)}`}
+              avatarColor="bg-teal-700/50 text-teal-400"
+              info1={c.email_contacto ? { icon: <Mail size={12} />, text: c.email_contacto } : undefined}
+              info2={c.movil ? { icon: <Phone size={12} />, text: c.movil } : undefined}
+              tags={c.entidad_id ? [
+                <span key="ent" className="text-xs text-slate-400 bg-slate-700/50 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-slate-600/50">
+                  <Building2 size={11} />
+                  <span className="truncate max-w-[150px]">{getEntidadName(c.entidad_id, c.entidad_nombre)}</span>
+                </span>
+              ] : []}
+              actions={[
+                <button
+                  key="seg"
+                  onClick={(e) => { e.stopPropagation(); setSeguimientoContacto(c) }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-teal-700 hover:bg-teal-600 text-teal-300 text-xs font-medium rounded-lg transition-colors"
+                >
+                  <MessageSquare size={13} />
+                  <span>Seguimiento</span>
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); handleEdit(c) }}
-                  className="p-1.5 text-slate-400 hover:text-yellow-400 rounded-lg hover:bg-slate-700 transition-colors" title="Editar">
-                  <Pencil size={14} />
-                </button>
-                {!c.entidad_id && (
-                  <button onClick={(e) => { e.stopPropagation(); handleEdit(c) }}
-                    className="p-1.5 text-slate-400 hover:text-teal-400 rounded-lg hover:bg-slate-700 transition-colors" title="Asignar a entidad">
-                    <UserPlus size={14} />
-                  </button>
-                )}
-                {isAdmin && (
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
-                    className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition-colors" title="Eliminar">
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
+              ]}
+              menuItems={[
+                {
+                  icon: <Pencil size={14} />,
+                  label: 'Editar',
+                  onClick: () => handleEdit(c)
+                },
+                {
+                  icon: <UserPlus size={14} />,
+                  label: 'Reasignar empresa',
+                  onClick: () => handleEdit(c)
+                },
+                ...(isAdmin ? [{
+                  icon: <Trash2 size={14} />,
+                  label: 'Eliminar',
+                  onClick: () => handleDelete(c),
+                  danger: true
+                }] : [])
+              ]}
+            />
           ))}
         </div>
       )}

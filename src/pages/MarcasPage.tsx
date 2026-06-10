@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { getMarcas, deleteEntidad } from '../api/crmApi'
+import { getMarcas, deleteEntidad, createContacto } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
 import { MarcaFormModal } from '../components/MarcaFormModal'
-import { Pencil, Trash2, Plus, Search } from 'lucide-react'
+import { ContactoFormModal } from '../components/ContactoFormModal'
+import { SeguimientoModal } from '../components/SeguimientoModal'
+import { CommonCard } from '../components/CommonCard'
+import { Pencil, Trash2, Plus, Search, MapPin, User, Building2, MessageSquare, UserPlus } from 'lucide-react'
 import type { Entidad } from '../api/types'
 
 export function MarcasPage() {
@@ -16,7 +19,9 @@ export function MarcasPage() {
     mode: 'create' | 'edit'
     data?: Entidad
   }>({ open: false, mode: 'create' })
-
+  const [seguimientoMarca, setSeguimientoMarca] = useState<Entidad | null>(null)
+  const [showContactoForm, setShowContactoForm] = useState(false)
+  const [selectedMarcaId, setSelectedMarcaId] = useState<number | null>(null)
   const { data, isLoading } = useQuery({
     queryKey: ['marcas', search, page],
     queryFn: () => getMarcas({ search, per_page: perPage, page }),
@@ -71,61 +76,66 @@ export function MarcasPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 bg-slate-700 rounded animate-pulse" />
-              ))}
-            </div>
-          ) : marcas.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-slate-500">No hay marcas registradas</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left p-3 text-xs font-medium text-slate-400 uppercase">Nombre</th>
-                    <th className="text-left p-3 text-xs font-medium text-slate-400 uppercase">Identificación</th>
-                    <th className="text-left p-3 text-xs font-medium text-slate-400 uppercase">Dominio</th>
-                    <th className="text-left p-3 text-xs font-medium text-slate-400 uppercase">Ciudad</th>
-                    <th className="text-left p-3 text-xs font-medium text-slate-400 uppercase">Email</th>
-                    <th className="text-right p-3 text-xs font-medium text-slate-400 uppercase">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {marcas.map((marca: Entidad) => (
-                    <tr key={marca.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                      <td className="p-3 text-sm text-slate-200 font-medium">{marca.nombre}</td>
-                      <td className="p-3 text-sm text-slate-400">{marca.identificacion ?? '—'}</td>
-                      <td className="p-3 text-sm text-slate-400">{marca.dominio ?? '—'}</td>
-                      <td className="p-3 text-sm text-slate-400">{marca.ciudad_cod ?? '—'}</td>
-                      <td className="p-3 text-sm text-slate-400">{marca.email ?? '—'}</td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setSlidePanel({ open: true, mode: 'edit', data: marca })}
-                            className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-teal-400 transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(marca.id, marca.nombre)}
-                            className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Cards Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-40 bg-slate-800 rounded-xl border border-slate-700 animate-pulse" />
+            ))}
+          </div>
+        ) : marcas.length === 0 ? (
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
+            <Building2 className="mx-auto text-slate-600 mb-3" size={48} />
+            <p className="text-slate-400">No hay marcas registradas</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {marcas.map((marca: Entidad) => (
+              <CommonCard
+                key={marca.id}
+                title={marca.nombre}
+                subtitle={marca.identificacion || 'NIT no registrado'}
+                avatarText={marca.nombre.charAt(0)}
+                avatarColor="bg-teal-850 text-teal-400"
+                info1={marca.ciudad_nombre ? { icon: <MapPin size={12} />, text: marca.ciudad_nombre } : undefined}
+                info2={{ icon: <User size={12} />, text: marca.comercial_asignado || 'Sin asignar' }}
+                tags={[
+                  { label: marca.estado, variant: 'emerald' },
+                  { label: `${marca.oportunidades_count ?? 0} Ops`, variant: 'amber' },
+                  { label: `${marca.contactos_count ?? 0} Contactos`, variant: 'purple' },
+                ]}
+                actions={[
+                  <button
+                    key="seg"
+                    onClick={() => setSeguimientoMarca(marca)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-teal-700 hover:bg-teal-600 text-teal-300 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    <MessageSquare size={13} />
+                    <span>Seguimiento</span>
+                  </button>
+                ]}
+                menuItems={[
+                  {
+                    icon: <Pencil size={14} />,
+                    label: 'Editar',
+                    onClick: () => setSlidePanel({ open: true, mode: 'edit', data: marca })
+                  },
+                  {
+                    icon: <UserPlus size={14} />,
+                    label: 'Asignar contacto',
+                    onClick: () => { setSelectedMarcaId(marca.id); setShowContactoForm(true) }
+                  },
+                  {
+                    icon: <Trash2 size={14} />,
+                    label: 'Eliminar',
+                    onClick: () => handleDelete(marca.id, marca.nombre),
+                    danger: true
+                  }
+                ]}
+              />
+            ))}
+          </div>
+        )}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -152,7 +162,6 @@ export function MarcasPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* SlidePanel — split mode (content shrinks) */}
       <SlidePanel
@@ -166,6 +175,25 @@ export function MarcasPage() {
           onClose={() => setSlidePanel({ open: false, mode: 'create' })}
         />
       </SlidePanel>
+
+      {showContactoForm && (
+        <ContactoFormModal
+          mode="split"
+          entidadId={selectedMarcaId!}
+          onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['marcas'] }); setShowContactoForm(false); setSelectedMarcaId(null) }}
+          onClose={() => { setShowContactoForm(false); setSelectedMarcaId(null) }}
+        />
+      )}
+
+      {seguimientoMarca && (
+        <SeguimientoModal
+          entidadId={seguimientoMarca.id}
+          onClose={() => setSeguimientoMarca(null)}
+          onLogged={() => {
+            queryClient.invalidateQueries({ queryKey: ['marcas'] })
+          }}
+        />
+      )}
     </div>
   )
 }

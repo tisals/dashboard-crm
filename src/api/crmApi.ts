@@ -24,13 +24,15 @@ import type {
   UsuarioCreate,
   SeguridadDashboardData,
   MarcaCreate,
+  Pipeline,
+  PipelineEtapa,
 } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8001/api/v1'
 
 const crmApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -126,6 +128,7 @@ export async function getOportunidades(params?: {
   fecha_desde?: string
   fecha_hasta?: string
   codigo?: string
+  pipeline_id?: number
   page?: number
   per_page?: number
   sort_by?: string
@@ -170,14 +173,65 @@ export async function versionarOportunidad(id: number) {
   return data
 }
 
+// ── Pipelines ─────────────────────────────────────
+
 export async function getPipelines() {
-  const { data } = await crmApi.get<ApiResponse<any[]>>('/pipelines')
+  const { data } = await crmApi.get<ApiResponse<Pipeline[]>>('/pipelines')
   return data
 }
 
-// Update only estado (Kanban drag)
-export async function updateOportunidadEstado(id: number, estado: string) {
-  const { data } = await crmApi.put<ApiResponse<Oportunidad>>(`/oportunidades/${id}`, { estado })
+export async function getPipeline(id: number) {
+  const { data } = await crmApi.get<ApiResponse<Pipeline>>(`/pipelines/${id}`)
+  return data
+}
+
+export async function createPipeline(payload: Partial<Pipeline>) {
+  const { data } = await crmApi.post<ApiResponse<Pipeline>>('/pipelines', payload)
+  return data
+}
+
+export async function updatePipeline(id: number, payload: Partial<Pipeline>) {
+  const { data } = await crmApi.put<ApiResponse<Pipeline>>(`/pipelines/${id}`, payload)
+  return data
+}
+
+export async function deletePipeline(id: number) {
+  const { data } = await crmApi.delete<ApiResponse<null>>(`/pipelines/${id}`)
+  return data
+}
+
+// ── Pipeline Etapas ────────────────────────────────
+
+export async function createEtapa(pipelineId: number, payload: Partial<PipelineEtapa>) {
+  const { data } = await crmApi.post<ApiResponse<PipelineEtapa>>(`/pipelines/${pipelineId}/etapas`, payload)
+  return data
+}
+
+export async function updateEtapa(id: number, payload: Partial<PipelineEtapa>) {
+  const { data } = await crmApi.put<ApiResponse<PipelineEtapa>>(`/pipelines/etapas/${id}`, payload)
+  return data
+}
+
+export async function deleteEtapa(id: number) {
+  const { data } = await crmApi.delete<ApiResponse<null>>(`/pipelines/etapas/${id}`)
+  return data
+}
+
+export async function reorderEtapas(pipelineId: number, ordered_ids: number[]) {
+  const { data } = await crmApi.put<ApiResponse<null>>(`/pipelines/${pipelineId}/etapas/reorder`, { ordered_ids })
+  return data
+}
+
+// Update only pipeline_etapa_id (Kanban drag)
+export async function updateOportunidadPipelineEtapa(id: number, pipeline_etapa_id: number) {
+  const { data } = await crmApi.put<ApiResponse<Oportunidad>>(`/oportunidades/${id}`, { pipeline_etapa_id })
+  return data
+}
+
+// ── Bulk Move Oportunidades ───────────────────────
+
+export async function bulkMoveOportunidades(payload: { oportunidad_ids: number[]; target_pipeline_etapa_id: number }) {
+  const { data } = await crmApi.post<ApiResponse<any>>('/oportunidades/bulk-move-pipeline', payload)
   return data
 }
 

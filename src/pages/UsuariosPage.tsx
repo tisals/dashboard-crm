@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, Search } from 'lucide-react'
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getRoles } from '../api/crmApi'
 import type { Usuario, UsuarioCreate } from '../api/types'
 import { SlidePanel } from '../components/SlidePanel'
+import { CommonCard } from '../components/CommonCard'
 
 export function UsuariosPage() {
   const queryClient = useQueryClient()
@@ -93,64 +94,49 @@ export function UsuariosPage() {
         />
       </div>
 
-      {/* Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      {/* Users Grid */}
+      <div>
         {isLoading ? (
-          <div className="p-8 text-center text-slate-500">Cargando…</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-4 animate-pulse h-32" />
+            ))}
+          </div>
         ) : usuarios.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No hay usuarios registrados.</div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700 text-left text-slate-400 text-sm">
-                <th className="p-4 font-medium">Nombre</th>
-                <th className="p-4 font-medium">Email</th>
-                <th className="p-4 font-medium">Rol</th>
-                <th className="p-4 font-medium">Estado</th>
-                <th className="p-4 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u: Usuario) => (
-                <tr key={u.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                  <td className="p-4 text-slate-200 font-medium">{u.nombre}</td>
-                  <td className="p-4 text-slate-400">{u.email}</td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 bg-slate-700 rounded-lg text-xs text-slate-300">
-                      {roles.find(r => r.id === u.rol_id)?.nombre ?? '—'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                      u.estado === 'Activo'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-slate-600/30 text-slate-400'
-                    }`}>
-                      {u.estado}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(u)}
-                        className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-teal-400 transition-colors"
-                        title="Editar"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {usuarios.map((u: Usuario) => (
+              <CommonCard
+                key={u.id}
+                title={u.nombre}
+                subtitle={roles.find(r => r.id === u.rol_id)?.nombre ?? '—'}
+                info1={{ text: u.email }}
+                info2={{
+                  text: `Desde: ${u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}`,
+                }}
+                tags={[
+                  {
+                    label: u.estado,
+                    variant: u.estado === 'Activo' ? ('emerald' as const) : ('slate' as const),
+                  },
+                ]}
+                menuItems={[
+                  {
+                    icon: <Pencil size={14} />,
+                    label: 'Editar',
+                    onClick: () => handleEdit(u),
+                  },
+                  {
+                    icon: <Trash2 size={14} />,
+                    label: 'Eliminar',
+                    onClick: () => handleDelete(u.id),
+                    danger: true,
+                  },
+                ]}
+              />
+            ))}
+          </div>
         )}
       </div>
 

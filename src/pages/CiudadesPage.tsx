@@ -5,6 +5,7 @@ import { getCiudades, createCiudad, updateCiudad, deleteCiudad } from '../api/cr
 import { SlidePanel } from '../components/SlidePanel'
 import { Loader2 } from 'lucide-react'
 import type { Ciudad } from '../api/types'
+import { CommonCard } from '../components/CommonCard'
 
 function CiudadForm({ initialData, onClose }: { initialData?: Ciudad; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -185,41 +186,73 @@ export function CiudadesPage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Código</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Ciudad</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Departamento</th>
-                <th className="text-right px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Código</th>
+                    <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Ciudad</th>
+                    <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Departamento</th>
+                    <th className="text-right px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ciudades.map((c) => (
+                    <tr key={c.cod_municipio} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="px-4 py-3 text-slate-500 font-mono text-xs">{c.cod_municipio}</td>
+                      <td className="px-4 py-3 text-slate-200 font-medium">{c.nombre}</td>
+                      <td className="px-4 py-3 text-slate-400">{c.departamento || '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setSlidePanel({ open: true, mode: 'edit', data: c })}
+                            className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-teal-400 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c)}
+                            className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden grid grid-cols-1 gap-4 p-4">
               {ciudades.map((c) => (
-                <tr key={c.cod_municipio} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                  <td className="px-4 py-3 text-slate-500 font-mono text-xs">{c.cod_municipio}</td>
-                  <td className="px-4 py-3 text-slate-200 font-medium">{c.nombre}</td>
-                  <td className="px-4 py-3 text-slate-400">{c.departamento || '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => setSlidePanel({ open: true, mode: 'edit', data: c })}
-                        className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-teal-400 transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(c)}
-                        className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <CommonCard
+                  key={c.cod_municipio}
+                  title={c.nombre}
+                  info1={{
+                    icon: <MapPin size={14} className="text-slate-400" />,
+                    text: c.departamento || '—'
+                  }}
+                  menuItems={[
+                    {
+                      icon: <Pencil size={14} />,
+                      label: 'Editar',
+                      onClick: () => setSlidePanel({ open: true, mode: 'edit', data: c })
+                    },
+                    {
+                      icon: <Trash2 size={14} />,
+                      label: 'Eliminar',
+                      onClick: () => handleDelete(c),
+                      danger: true
+                    }
+                  ]}
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

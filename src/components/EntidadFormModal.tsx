@@ -23,13 +23,19 @@ interface EntidadFormModalProps {
 
 type FormState = {
   tipo_persona: string
+  tipo_id: string
   identificacion: string
   nombre: string
   nombre_comercial: string
   direccion: string
   ciudad_cod: string
+  dominio: string
+  linea_negocio: string
   email: string
   telefono: string
+  cantidad_empleados: string
+  rut: string
+  logo: string
   estado: string
   usuario_id: string
 }
@@ -40,13 +46,19 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   const isEdit = !!entidad
   const [form, setForm] = useState<FormState>({
     tipo_persona: 'Natural',
+    tipo_id: '',
     identificacion: '',
     nombre: '',
     nombre_comercial: '',
     direccion: '',
     ciudad_cod: '',
+    dominio: '',
+    linea_negocio: '',
     email: '',
     telefono: '',
+    cantidad_empleados: '',
+    rut: '',
+    logo: '',
     estado: 'Prospecto',
     usuario_id: '',
   })
@@ -120,13 +132,19 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     if (entidad) {
       setForm({
         tipo_persona: entidad.tipo_persona === 'Juridica' ? 'Juridica' : 'Natural',
+        tipo_id: entidad.tipo_id ?? '',
         identificacion: entidad.identificacion,
         nombre: entidad.nombre,
         nombre_comercial: entidad.nombre_comercial ?? '',
         direccion: entidad.direccion ?? '',
         ciudad_cod: entidad.ciudad_cod ?? '',
+        dominio: entidad.dominio ?? '',
+        linea_negocio: entidad.linea_negocio ?? '',
         email: entidad.email ?? '',
         telefono: entidad.telefono ?? '',
+        cantidad_empleados: entidad.cantidad_empleados?.toString() ?? '',
+        rut: entidad.rut ?? '',
+        logo: entidad.logo ?? '',
         estado: entidad.estado,
         usuario_id: '',
       })
@@ -135,8 +153,8 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
 
   function validate(): boolean {
     const errs: FormErrors = {}
-    if (!form.identificacion.trim()) errs.identificacion = 'La identificación es obligatoria'
-    if (!form.nombre.trim()) errs.nombre = 'El nombre es obligatorio'
+    if (!form.identificacion?.trim()) errs.identificacion = 'La identificación es obligatoria'
+    if (!form.nombre?.trim()) errs.nombre = 'El nombre es obligatorio'
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Email inválido'
     }
@@ -150,15 +168,21 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     setLoading(true)
     try {
       const payload: EntidadCreate = {
-        nombre: form.nombre.trim(),
-        identificacion: form.identificacion.trim(),
+        nombre: form.nombre?.trim() ?? '',
+        identificacion: form.identificacion?.trim() ?? '',
         tipo_persona: form.tipo_persona as 'Natural' | 'Juridica',
+        tipo_id: form.tipo_id || undefined,
         nombre_comercial: form.nombre_comercial.trim() || undefined,
         estado: form.estado as any,
         email: form.email || undefined,
         telefono: form.telefono || undefined,
+        cantidad_empleados: form.cantidad_empleados ? Number(form.cantidad_empleados) : undefined,
         ciudad_cod: form.ciudad_cod || undefined,
         direccion: form.direccion || undefined,
+        dominio: form.dominio || undefined,
+        linea_negocio: form.linea_negocio || undefined,
+        rut: form.rut || undefined,
+        logo: form.logo || undefined,
       }
       let savedEntity: Entidad
       if (isEdit) {
@@ -204,13 +228,25 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   return (
     <SlidePanel open onClose={onClose} title={isEdit ? 'Editar Entidad' : 'Nueva Entidad'} mode={mode}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Tipo de persona *</label>
             <select value={form.tipo_persona} onChange={(e) => setForm({...form, tipo_persona: e.target.value})}
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500">
               <option value="Natural">Natural</option>
               <option value="Juridica">Jurídica</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Tipo ID</label>
+            <select value={form.tipo_id} onChange={(e) => setForm({...form, tipo_id: e.target.value})}
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500">
+              <option value="">Seleccionar...</option>
+              <option value="NIT">NIT</option>
+              <option value="CC">Cédula de Ciudadanía</option>
+              <option value="CE">Cédula de Extranjería</option>
+              <option value="TI">Tarjeta de Identidad</option>
+              <option value="RUT">RUT</option>
             </select>
           </div>
           <div>
@@ -230,6 +266,20 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
           <label className="block text-sm text-slate-400 mb-1">Nombre comercial</label>
           <input type="text" value={form.nombre_comercial} onChange={(e) => setForm({...form, nombre_comercial: e.target.value})}
             className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Dominio</label>
+            <input type="text" value={form.dominio} onChange={(e) => setForm({...form, dominio: e.target.value})}
+              placeholder="ej: tecnoinnsoft.com"
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Línea de negocio</label>
+            <input type="text" value={form.linea_negocio} onChange={(e) => setForm({...form, linea_negocio: e.target.value})}
+              placeholder="ej: Seguridad y Salud en el Trabajo"
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div ref={ciudadRef} className="relative">
@@ -298,6 +348,24 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
           <div>
             <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
             <input type="text" value={form.telefono} onChange={(e) => setForm({...form, telefono: e.target.value})}
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Cantidad de empleados</label>
+            <input type="number" min="0" value={form.cantidad_empleados} onChange={(e) => setForm({...form, cantidad_empleados: e.target.value})}
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">RUT</label>
+            <input type="text" value={form.rut} onChange={(e) => setForm({...form, rut: e.target.value})}
+              className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-400 mb-1">Logo URL</label>
+            <input type="text" value={form.logo} onChange={(e) => setForm({...form, logo: e.target.value})}
+              placeholder="https://..."
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
           </div>
         </div>

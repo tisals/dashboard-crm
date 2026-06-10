@@ -86,15 +86,23 @@ export interface Entidad {
   nombre: string
   identificacion: string
   tipo_persona: 'Natural' | 'Juridica'
+  tipo_id?: string
   estado: 'Activo' | 'Inactivo' | 'Prospecto' | 'Propia'
   email?: string
   telefono?: string
+  cantidad_empleados?: number
   dominio?: string
   nombre_comercial?: string
   direccion?: string
   ciudad_cod?: string
+  linea_negocio?: string
+  rut?: string
   logo?: string
   created_at: string
+  contactos_count?: number
+  oportunidades_count?: number
+  comercial_asignado?: string
+  ciudad_nombre?: string
 }
 
 export type OportunidadEstado = 'Borrador' | 'Enviada' | 'Aceptada' | 'Rechazada' | 'Ganada' | 'Perdida'
@@ -107,6 +115,8 @@ export interface Oportunidad {
   fecha: string
   fuente_canal?: string
   estado: OportunidadEstado
+  pipeline_id?: number
+  pipeline_etapa_id?: number
   observaciones?: string
   aclaraciones?: string
   validez_oferta?: number
@@ -134,13 +144,17 @@ export interface EntidadCreate {
   nombre: string
   identificacion?: string
   tipo_persona: 'Natural' | 'Juridica'
+  tipo_id?: string
   estado?: 'Activo' | 'Inactivo' | 'Prospecto' | 'Propia'
   nombre_comercial?: string
   dominio?: string
   email?: string
   telefono?: string
+  cantidad_empleados?: number
   ciudad_cod?: string
   direccion?: string
+  linea_negocio?: string
+  rut?: string
   logo?: string
 }
 
@@ -420,6 +434,28 @@ export interface DetalleLinea {
   unit_value: string
   total: string
   iva: number
+}
+
+// ── Pipeline ───────────────────────────────────────
+
+export interface PipelineEtapa {
+  id: number
+  pipeline_id: number
+  nombre: string
+  orden: number
+  habilitado: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Pipeline {
+  id: number
+  nombre: string
+  codigo: string
+  habilitado: boolean
+  etapas?: PipelineEtapa[]
+  created_at: string
+  updated_at: string
 }
 
 

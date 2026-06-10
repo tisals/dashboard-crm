@@ -20,9 +20,13 @@ Saludos cordiales.`
 
 export function SendQuoteModal({ oportunidadId, oportunidad, contactos, onClose, onSent }: SendQuoteModalProps) {
   const [mensaje, setMensaje] = useState(DEFAULT_MESSAGE)
-  const [contactoId, setContactoId] = useState<number | null>(
-    contactos.find(c => c.rol === 'Decisor')?.id ?? contactos[0]?.id ?? null,
-  )
+  const [contactoId, setContactoId] = useState<number | null>(() => {
+    // Prefer: rol contains 'Decisor' or 'Decision', then cargo contains director/gerente/ceo, then first
+    const decisor = contactos.find(c => /decisor|decision/i.test(c.rol ?? ''))
+      ?? contactos.find(c => /gerente|director|ceo|dueño|propietario|decision/i.test(c.cargo ?? ''))
+      ?? contactos[0]
+    return decisor?.id ?? null
+  })
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,7 +71,7 @@ export function SendQuoteModal({ oportunidadId, oportunidad, contactos, onClose,
             <option value="">Sin contacto específico</option>
             {contactos.map(c => (
               <option key={c.id} value={c.id}>
-                {c.nombres} {c.apellidos}{c.cargo ? ` — ${c.cargo}` : ''}{c.rol === 'Decisor' ? ' ⭐' : ''}
+                {c.nombres} {c.apellidos}{c.cargo ? ` — ${c.cargo}` : ''}{/decisor|decision|gerente|director|ceo/i.test(`${c.rol ?? ''} ${c.cargo ?? ''}`) ? ' ⭐' : ''}
                 {c.email_contacto ? ` <${c.email_contacto}>` : ''}
               </option>
             ))}

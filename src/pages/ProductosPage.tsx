@@ -5,6 +5,7 @@ import { getProductos, deleteProducto } from '../api/crmApi'
 import { SlidePanel } from '../components/SlidePanel'
 import { ProductoFormModal } from '../components/ProductoFormModal'
 import type { Producto } from '../api/types'
+import { CommonCard } from '../components/CommonCard'
 
 export function ProductosPage() {
   const queryClient = useQueryClient()
@@ -77,20 +78,13 @@ export function ProductosPage() {
       </div>
 
       {/* Products List */}
-      <div className="space-y-3">
+      <div>
         {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-4 animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-700 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <div className="w-40 h-4 bg-slate-700 rounded" />
-                  <div className="w-24 h-3 bg-slate-700 rounded" />
-                </div>
-                <div className="w-20 h-4 bg-slate-700 rounded" />
-              </div>
-            </div>
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-4 animate-pulse h-32" />
+            ))}
+          </div>
         ) : productos.length === 0 ? (
           <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
             <Package size={48} className="mx-auto text-slate-600 mb-3" />
@@ -100,46 +94,45 @@ export function ProductosPage() {
             </p>
           </div>
         ) : (
-          productos.map((p) => (
-            <div key={p.id} className="bg-slate-800 rounded-xl border border-slate-700 p-4 hover:border-slate-600 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-teal-700/50 flex items-center justify-center">
-                  <Package size={18} className="text-teal-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-200">{p.nombre}</p>
-                  <p className="text-xs text-slate-500">
-                    {p.medida && <span>{p.medida}</span>}
-                    {p.linea_negocio && <span> · {p.linea_negocio}</span>}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-medium text-teal-400">{formatPrice(p.precio ?? p.vr_unitario)}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-lg ${
-                    p.estado === 'Activo'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-slate-600 text-slate-400'
-                  }`}>
-                    {p.estado}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => setSlidePanel({ open: true, mode: 'edit', data: p })}
-                    className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-teal-400 transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p)}
-                    className="p-1.5 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {productos.map((p) => (
+              <CommonCard
+                key={p.id}
+                title={p.nombre}
+                subtitle={p.linea_negocio || '—'}
+                info1={{
+                  text: (
+                    <span>
+                      IVA: {p.iva ?? 0}% ·{' '}
+                      <span className="text-teal-400 font-semibold">
+                        {formatPrice(p.precio ?? p.vr_unitario)}
+                      </span>
+                    </span>
+                  ),
+                }}
+                tags={[
+                  ...(p.referencia ? [{ label: p.referencia, variant: 'slate' as const }] : []),
+                  {
+                    label: p.estado,
+                    variant: p.estado === 'Activo' ? ('emerald' as const) : ('slate' as const),
+                  },
+                ]}
+                menuItems={[
+                  {
+                    icon: <Pencil size={14} />,
+                    label: 'Editar',
+                    onClick: () => setSlidePanel({ open: true, mode: 'edit', data: p }),
+                  },
+                  {
+                    icon: <Trash2 size={14} />,
+                    label: 'Eliminar',
+                    onClick: () => handleDelete(p),
+                    danger: true,
+                  },
+                ]}
+              />
+            ))}
+          </div>
         )}
       </div>
 

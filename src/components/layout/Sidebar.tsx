@@ -19,6 +19,7 @@ import {
   BookOpen,
   LayoutGrid,
   Flag,
+  GitBranch,
 } from 'lucide-react'
 
 const moduleIcons: Record<string, React.ComponentType<any>> = {
@@ -37,6 +38,7 @@ const moduleIcons: Record<string, React.ComponentType<any>> = {
   [MODULES.CIUDADES]: MapPin,
   [MODULES.PRODUCTOS]: Package,
   [MODULES.MARCAS]: Flag,
+  [MODULES.PIPELINES]: GitBranch,
 }
 
 const moduleLabels: Record<string, string> = {
@@ -55,6 +57,7 @@ const moduleLabels: Record<string, string> = {
   [MODULES.CIUDADES]: 'Ciudades',
   [MODULES.PRODUCTOS]: 'Productos',
   [MODULES.MARCAS]: 'Marcas / Propia',
+  [MODULES.PIPELINES]: 'Pipelines',
 }
 
 interface GroupDef {
@@ -65,7 +68,7 @@ interface GroupDef {
 const GROUPS: GroupDef[] = [
   {
     label: 'CRM',
-    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM],
+    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES],
   },
   {
     label: 'ERP',
@@ -80,6 +83,8 @@ const GROUPS: GroupDef[] = [
 function moduleToPath(module: string): string {
   if (module === MODULES.DASHBOARD) return '/dashboard'
   if (module === MODULES.ERP_DASHBOARD) return '/erp'
+  if (module === MODULES.PIPELINES) return '/crm/pipelines'
+  if (module === MODULES.CRM) return '/crm/oportunidad'
   return `/${module}`
 }
 

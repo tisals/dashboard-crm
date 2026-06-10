@@ -43,6 +43,7 @@ export const MODULES = {
   CIUDADES: 'ciudades',
   PRODUCTOS: 'productos',
   MARCAS: 'marcas',
+  PIPELINES: 'pipelines',
 } as const;
 
 // Definición de permisos por módulo
@@ -62,6 +63,7 @@ const allPermissions: Permission[] = [
   { module: MODULES.CIUDADES, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.PRODUCTOS, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.MARCAS, actions: ['create', 'read', 'update', 'delete'] },
+  { module: MODULES.PIPELINES, actions: ['create', 'read', 'update', 'delete'] },
 ];
 
 // Roles predefinidos
@@ -88,7 +90,7 @@ export const ROLES: Record<RoleSlug, Role> = {
       { module: MODULES.CRM, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.SEGUIMIENTOS, actions: ['create', 'read', 'update', 'delete'] },
     ],
-    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.SEGUIMIENTOS],
+    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES, MODULES.SEGUIMIENTOS],
     dashboard: 'crm',
   },
 
