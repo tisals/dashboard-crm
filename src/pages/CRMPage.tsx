@@ -1153,7 +1153,7 @@ export function CRMPage() {
     queryFn: () => getEntidadUsuarios(selectedOpp!.entidad_id),
     enabled: !!selectedOpp?.entidad_id,
   })
-  const comerciales = entidadUsuariosData?.data ?? []
+  const comerciales = Array.isArray(entidadUsuariosData?.data) ? entidadUsuariosData.data : []
 
   // Fetch seguimientos for timeline
   const { data: timelineSegData } = useQuery({
@@ -1627,7 +1627,7 @@ export function CRMPage() {
               <div>
                 <h3 className="text-sm font-medium text-slate-400 mb-3">Contactos</h3>
                 <div className="space-y-3">
-                  {contactosData?.data?.data && contactosData.data.data.length > 0 ? (
+                  {Array.isArray(contactosData?.data?.data) && contactosData.data.data.length > 0 ? (
                     contactosData.data.data.map(contacto => (
                       <div key={contacto.id} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
                         <div className="flex items-start justify-between">
