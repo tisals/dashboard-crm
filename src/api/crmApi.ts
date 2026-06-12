@@ -262,6 +262,11 @@ export async function deleteContacto(id: number) {
   return data
 }
 
+export async function reasignarContacto(contactoId: number, payload: { entidad_id: number; merge?: boolean }) {
+  const { data } = await crmApi.post<ApiResponse<Contacto>>(`/contacto/${contactoId}/reasignar`, payload)
+  return data
+}
+
 // ── Seguimientos ────────────────────────────────
 
 export async function getSeguimientos(params?: {

@@ -610,6 +610,7 @@ export function DirectorioPage() {
           mode="split"
           entidadId={selectedEntityId!}
           contacto={editContacto ?? undefined}
+          entidades={entidades}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['contactos'] });
             setShowContactoForm(false);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { Search, Users, Plus, Pencil, Trash2, Building2, UserPlus, ChevronDown, MessageSquare, Phone, Mail } from 'lucide-react'
-import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto, getSeguimientos } from '../api/crmApi'
+import { getContactos, getEntidades, createContacto, updateContacto, deleteContacto, getSeguimientos, reasignarContacto } from '../api/crmApi'
 import { useAuth } from '../context/AuthContext'
 import { SlidePanel } from '../components/SlidePanel'
 import { Contacto, Entidad } from '../api/types'
@@ -234,6 +234,10 @@ export function ContactosPage() {
           if (selectedContacto && editMode) updateMut.mutate({ id: selectedContacto.id, data })
           else createMut.mutate(data)
         }}
+        onReasignar={async (contactoId, entidadId, merge) => {
+          await reasignarContacto(contactoId, { entidad_id: entidadId, merge })
+          queryClient.invalidateQueries({ queryKey: ['contactos'] })
+        }}
         isLoading={createMut.isPending || updateMut.isPending}
       />
 
@@ -265,14 +269,18 @@ export function ContactosPage() {
 }
 // ── Form Panel ───────────────────────────────────────────────────
 
-function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoading }: {
+function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, onReasignar, isLoading }: {
   open: boolean; onClose: () => void; contacto: Contacto | null; entidades: Entidad[];
-  onSubmit: (data: any) => void; isLoading: boolean
+  onSubmit: (data: any) => void; onReasignar: (contactoId: number, entidadId: number, merge: boolean) => Promise<void>;
+  isLoading: boolean
 }) {
   const [form, setForm] = useState({
     nombres: '', apellidos: '', email_contacto: '', email_secundario: '',
     tel_contacto: '', movil: '', cargo: '', area: '', rol: '', etapa: '', entidad_id: '',
   })
+  const [showConflictDialog, setShowConflictDialog] = useState(false)
+  const [conflictData, setConflictData] = useState<{ id: number; nombres: string; apellidos: string; email_contacto: string } | null>(null)
+  const [pendingEntityId, setPendingEntityId] = useState<number | null>(null)
 
   useEffect(() => {
     if (contacto) {
@@ -306,83 +314,150 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, isLoa
     }
   }, [contacto, open])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSubmit({ ...form, entidad_id: form.entidad_id ? Number(form.entidad_id) : null })
+    const targetEntidadId = form.entidad_id ? Number(form.entidad_id) : null
+    const originalEntidadId = contacto?.entidad_id ?? null
+    const entityChanged = contacto && targetEntidadId && targetEntidadId !== originalEntidadId
+
+    if (entityChanged) {
+      try {
+        await onReasignar(contacto.id, targetEntidadId, false)
+        // Also update other fields
+        const { entidad_id: _, ...rest } = form
+        onSubmit({ ...rest })
+      } catch (err: any) {
+        if (err?.response?.data?.error === 'conflict') {
+          setConflictData(err.response.data.conflicting_contacto)
+          setPendingEntityId(targetEntidadId)
+          setShowConflictDialog(true)
+          return
+        }
+        throw err
+      }
+    } else {
+      onSubmit({ ...form, entidad_id: targetEntidadId })
+    }
+  }
+
+  async function handleMergeConfirm() {
+    if (!contacto || !pendingEntityId) return
+    try {
+      await onReasignar(contacto.id, pendingEntityId, true)
+      const { entidad_id: _, ...rest } = form
+      onSubmit({ ...rest })
+    } catch {
+      // Error handled by parent
+    }
+    setShowConflictDialog(false)
+    setConflictData(null)
+    setPendingEntityId(null)
   }
 
   return (
-    <SlidePanel open={open} onClose={onClose} title={contacto ? 'Editar Contacto' : 'Nuevo Contacto'} mode="split">
-      <form onSubmit={handleSubmit} className="space-y-4 p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Nombres *</label>
-            <input required value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+    <>
+      <SlidePanel open={open} onClose={onClose} title={contacto ? 'Editar Contacto' : 'Nuevo Contacto'} mode="split">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nombres *</label>
+              <input required value={form.nombres} onChange={e => setForm({ ...form, nombres: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Apellidos *</label>
+              <input required value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Apellidos *</label>
-            <input required value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
-          </div>
-        </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Email *</label>
-          <input required type="email" value={form.email_contacto} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Teléfono</label>
-            <input value={form.tel_contacto} onChange={e => setForm({ ...form, tel_contacto: e.target.value })}
+            <label className="block text-xs text-slate-400 mb-1">Email *</label>
+            <input required type="email" value={form.email_contacto} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
               className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Teléfono</label>
+              <input value={form.tel_contacto} onChange={e => setForm({ ...form, tel_contacto: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Móvil</label>
+              <input value={form.movil} onChange={e => setForm({ ...form, movil: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Cargo</label>
+              <input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Área</label>
+              <input value={form.area} onChange={e => setForm({ ...form, area: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Móvil</label>
-            <input value={form.movil} onChange={e => setForm({ ...form, movil: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
+            <label className="block text-xs text-slate-400 mb-1">Entidad</label>
+            <select value={form.entidad_id} onChange={e => setForm({ ...form, entidad_id: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500">
+              <option value="">Sin entidad</option>
+              {contacto && contacto.entidad_id && !entidades.some(ent => ent.id === contacto.entidad_id) && (
+                <option value={contacto.entidad_id.toString()}>
+                  {contacto.entidad_nombre ?? `Entidad #${contacto.entidad_id}`}
+                </option>
+              )}
+              {entidades.map(ent => (<option key={ent.id} value={ent.id.toString()}>{ent.nombre}</option>))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-slate-700">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm transition-colors">Cancelar</button>
+            <button type="submit" disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+              {isLoading ? 'Guardando...' : contacto ? 'Actualizar' : 'Crear'}
+            </button>
+          </div>
+        </form>
+      </SlidePanel>
+
+      {/* Conflict Dialog */}
+      {showConflictDialog && conflictData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={() => { setShowConflictDialog(false); setConflictData(null); setPendingEntityId(null) }}>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-200 mb-2">Conflicto de contacto</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Ya existe un contacto con el email <span className="text-slate-200 font-medium">{conflictData.email_contacto}</span> en la entidad destino:
+            </p>
+            <div className="bg-slate-900 rounded-lg p-3 mb-4 border border-slate-700">
+              <p className="text-sm text-slate-200 font-medium">{conflictData.nombres} {conflictData.apellidos}</p>
+              <p className="text-xs text-slate-400">{conflictData.email_contacto}</p>
+            </div>
+            <p className="text-sm text-slate-400 mb-4">
+              ¿Deseás <span className="text-teal-400 font-medium">fusionar</span> los contactos? Los seguimientos y oportunidades del contacto existente se transferirán al actual.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowConflictDialog(false); setConflictData(null); setPendingEntityId(null) }}
+                className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-medium transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleMergeConfirm}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 text-white rounded-xl text-sm font-medium transition-colors">
+                {isLoading ? 'Fusionando...' : 'Sí, fusionar'}
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Cargo</label>
-            <input value={form.cargo} onChange={e => setForm({ ...form, cargo: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Área</label>
-            <input value={form.area} onChange={e => setForm({ ...form, area: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Entidad</label>
-          <select value={form.entidad_id} onChange={e => setForm({ ...form, entidad_id: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500">
-            <option value="">Sin entidad</option>
-            {contacto && contacto.entidad_id && !entidades.some(ent => ent.id === contacto.entidad_id) && (
-              <option value={contacto.entidad_id.toString()}>
-                {contacto.entidad_nombre ?? `Entidad #${contacto.entidad_id}`}
-              </option>
-            )}
-            {entidades.map(ent => (<option key={ent.id} value={ent.id.toString()}>{ent.nombre}</option>))}
-          </select>
-        </div>
-
-        <div className="flex gap-3 pt-4 border-t border-slate-700">
-          <button type="button" onClick={onClose}
-            className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm transition-colors">Cancelar</button>
-          <button type="submit" disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
-            {isLoading ? 'Guardando...' : contacto ? 'Actualizar' : 'Crear'}
-          </button>
-        </div>
-      </form>
-    </SlidePanel>
+      )}
+    </>
   )
 }
 
