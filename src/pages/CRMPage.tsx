@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useSearchParams, useOutletContext } from 'react-router-dom'
 import {
@@ -308,7 +308,7 @@ interface FilterBarProps {
   estadosOptions: Column[]
 }
 
-function FilterBar({ filters, onChange, entidadName, productos, estadosOptions }: FilterBarProps) {
+const FilterBar = memo(function FilterBar({ filters, onChange, entidadName, productos, estadosOptions }: FilterBarProps) {
   const [showEntidadSearch, setShowEntidadSearch] = useState(false)
   const [entidadSearch, setEntidadSearch] = useState('')
   const [entidadResults, setEntidadResults] = useState<Entidad[]>([])
@@ -429,7 +429,7 @@ function FilterBar({ filters, onChange, entidadName, productos, estadosOptions }
       />
     </div>
   )
-}
+})
 
 // ── Create Modal ────────────────────────────────
 
@@ -742,9 +742,9 @@ export function CRMPage() {
     queryKey: ['productos'],
     queryFn: () => getProductos({ per_page: 100 }),
   })
-  function handleFilterChange(newFilters: typeof filters) {
+  const handleFilterChange = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters)
-  }
+  }, [])
 
   function toggleSort(column: string) {
     if (sortBy === column) {

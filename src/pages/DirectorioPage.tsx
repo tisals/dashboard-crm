@@ -21,6 +21,7 @@ import {
   getOportunidades,
   deleteContacto,
   deleteEntidad,
+  getEntidadUsuarios,
 } from '../api/crmApi';
 import { useAuth } from '../context/AuthContext';
 import { ContactCard } from '../components/ContactCard';
@@ -140,6 +141,14 @@ export function DirectorioPage() {
   });
 
   const oportunidades = oportunidadesData?.data?.data ?? [];
+
+  const { data: entidadUsuariosData } = useQuery({
+    queryKey: ['entidad-usuarios', selectedEntityId],
+    queryFn: () => getEntidadUsuarios(selectedEntityId!),
+    enabled: !!selectedEntityId,
+  });
+  const entidadUsuarios: Usuario[] = (entidadUsuariosData as any)?.data ?? [];
+  const assignedComercial = entidadUsuarios[0];
 
   /* ----------   UI   ---------- */
   return (
@@ -408,12 +417,18 @@ export function DirectorioPage() {
                   <span>{selectedEntity.telefono}</span>
                 </div>
               )}
-              {selectedEntity.nombre_comercial && (
+              {assignedComercial ? (
+                <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm">
+                  <Building2 size={14} />
+                  <span className="text-slate-300">{assignedComercial.nombre}</span>
+                  <span className="text-slate-600 text-xs">/ Comercial</span>
+                </div>
+              ) : selectedEntity.nombre_comercial ? (
                 <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm">
                   <Building2 size={14} />
                   <span className="text-slate-300">{selectedEntity.nombre_comercial}</span>
                 </div>
-              )}
+              ) : null}
               {selectedEntity.direccion && (
                 <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm">
                   <span className="w-1 h-1 rounded-full bg-slate-500" />

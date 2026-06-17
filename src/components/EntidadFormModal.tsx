@@ -9,8 +9,9 @@ import {
   getEntidadUsuarios,
   assignEntidadUsuario,
   removeEntidadUsuario,
+  getMaestros,
 } from '../api/crmApi'
-import type { Entidad, EntidadCreate, Ciudad, Usuario } from '../api/types'
+import type { Entidad, EntidadCreate, Ciudad, Usuario, Maestro } from '../api/types'
 import { SlidePanel } from './SlidePanel'
 import { Search } from 'lucide-react'
 
@@ -76,6 +77,14 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   })
   const usuarios: Usuario[] = (usuariosData?.data as any)?.data ?? usuariosData?.data ?? []
   const comerciales = usuarios.filter(u => u.estado === 'Activo')
+
+  // Fetch entity stages from maestro table
+  const { data: etapasData } = useQuery({
+    queryKey: ['maestros', 'etapa_contacto'],
+    queryFn: () => getMaestros({ campo: 'Etapa_contacto', per_page: 100 }),
+  })
+  const etapasContacto: Maestro[] = (etapasData as any)?.data ?? []
+  const estadoOptions = etapasContacto.filter(e => e.habilitado !== '0')
 
   // Get currently assigned user for this entity if editing
   const { data: assignedUsersRes } = useQuery({
@@ -327,9 +336,10 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
             <label className="block text-sm text-slate-400 mb-1">Estado</label>
             <select value={form.estado} onChange={(e) => setForm({...form, estado: e.target.value})}
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500">
-              <option value="Prospecto">Prospecto</option>
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
+              <option value="">Seleccionar...</option>
+              {estadoOptions.map(e => (
+                <option key={e.id} value={e.nombre}>{e.nombre}</option>
+              ))}
             </select>
           </div>
         </div>
