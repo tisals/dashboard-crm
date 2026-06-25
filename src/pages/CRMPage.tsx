@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Search, X, Copy, Check, Phone, Mail, MessageSquare, Calendar, CalendarDays, ChevronDown, ChevronRight, Trash2, Pencil, FileText, ArrowRight } from 'lucide-react'
+import { Search, X, Copy, Check, Phone, Mail, MessageSquare, Calendar, CalendarDays, CalendarPlus, ChevronDown, ChevronRight, Trash2, Pencil, FileText, ArrowRight } from 'lucide-react'
 import { CommonCard } from '../components/CommonCard'
 import {
   getOportunidades,
@@ -110,6 +110,7 @@ function OportunidadCard({
   onClick,
   selected,
   onToggleSelect,
+  onAddSeguimiento,
 }: {
   oportunidad: Oportunidad
   onClone: (id: number) => void
@@ -119,6 +120,7 @@ function OportunidadCard({
   onClick?: () => void
   selected?: boolean
   onToggleSelect?: (id: number) => void
+  onAddSeguimiento?: (oportunidadId: number) => void
 }) {
   const {
     attributes,
@@ -176,11 +178,41 @@ function OportunidadCard({
           info1={{ text: oportunidad.entidad_nombre ?? `#${oportunidad.entidad_id}` }}
           info2={oportunidad.updated_at ? { text: new Date(oportunidad.updated_at).toLocaleDateString('es-ES') } : undefined}
           tags={refTags.slice(0, 3).map(tag => ({ label: tag, variant: 'slate' as const }))}
+          // T-FE-12: + Seguimiento button visible on hover. Disabled if no contacto_id.
+          actionSlot={
+            onAddSeguimiento && oportunidad.contacto_id ? (
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAddSeguimiento(oportunidad.id)
+                }}
+                title="Registrar seguimiento"
+                className="p-1.5 rounded-lg bg-slate-700/60 hover:bg-teal-500/30 text-slate-300 hover:text-teal-300 transition-colors"
+              >
+                <CalendarPlus size={14} />
+              </button>
+            ) : onAddSeguimiento ? (
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                disabled
+                title="Esta oportunidad no tiene contacto asignado"
+                className="p-1.5 rounded-lg bg-slate-700/30 text-slate-600 cursor-not-allowed"
+              >
+                <CalendarPlus size={14} />
+              </button>
+            ) : undefined
+          }
           menuItems={[
             ...(oportunidad.estado === 'Aceptada' ? [{
               icon: <Check size={14} />,
               label: 'Marcar ganada',
               onClick: () => onGanar(oportunidad.id)
+            }] : []),
+            ...(onAddSeguimiento && oportunidad.contacto_id ? [{
+              icon: <CalendarPlus size={14} />,
+              label: 'Nuevo seguimiento',
+              onClick: () => onAddSeguimiento(oportunidad.id)
             }] : []),
             {
               icon: <Pencil size={14} />,
@@ -236,6 +268,7 @@ function KanbanColumn({
   onCardClick,
   selectedOppIds,
   onToggleSelect,
+  onAddSeguimiento,
 }: {
   column: Column
   oportunidades: Oportunidad[]
@@ -246,6 +279,7 @@ function KanbanColumn({
   onCardClick?: (id: number) => void
   selectedOppIds?: Set<number>
   onToggleSelect?: (id: number) => void
+  onAddSeguimiento?: (oportunidadId: number) => void
 }) {
   const { setNodeRef } = useDroppable({ id: column.id })
   const totalMonto = oportunidades.reduce((sum, op) => sum + (Number(op.valor) || 0), 0)
@@ -280,6 +314,7 @@ function KanbanColumn({
               onClick={() => onCardClick?.(op.id)}
               selected={selectedOppIds?.has(op.id)}
               onToggleSelect={onToggleSelect}
+              onAddSeguimiento={onAddSeguimiento}
             />
           ))}
           {oportunidades.length === 0 && (
@@ -1265,6 +1300,18 @@ export function CRMPage() {
     setShowSeguimientoModal(true)
   }
 
+  // T-FE-12: handle "+ Seguimiento" from a kanban card. The oportunidad must
+  // already have a contacto_id (button is disabled otherwise). Open the same
+  // modal used by contacto detail, pre-filled with oportunidad_id + entidad_id.
+  function handleAddSeguimiento(oportunidadId: number) {
+    const oportunidad = oportunidades.find(o => o.id === oportunidadId)
+    if (!oportunidad?.contacto_id) return
+    handleOpenSeguimiento(
+      oportunidad.contacto_id,
+      oportunidad.contacto_nombre ?? `Contacto #${oportunidad.contacto_id}`,
+    )
+  }
+
   function handleSeguimientoLogged() {
     queryClient.invalidateQueries({ queryKey: ['seguimientos'] })
     setShowSeguimientoModal(false)
@@ -1419,6 +1466,7 @@ export function CRMPage() {
                 onCardClick={handleCardClick}
                 selectedOppIds={selectedOppIds}
                 onToggleSelect={handleToggleSelect}
+                onAddSeguimiento={handleAddSeguimiento}
               />
             ))}
           </div>

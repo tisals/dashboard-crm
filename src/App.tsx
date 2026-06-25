@@ -22,6 +22,7 @@ import { ContactosPage } from './pages/ContactosPage'
 import { CiudadesPage } from './pages/CiudadesPage'
 import { ProductosPage } from './pages/ProductosPage'
 import { MaestrosPage } from './pages/MaestrosPage'
+import { SeguimientoCalendarioPage } from './pages/SeguimientoCalendarioPage'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -116,6 +117,7 @@ function ProtectedLayout() {
             <Route path="/productos" element={<ProductosPage />} />
             <Route path="/maestros" element={<MaestrosPage />} />
             <Route path="/erp" element={<DashboardPage />} />
+            <Route path="/seguimientos/calendario" element={<SeguimientoCalendarioPage />} />
           </Routes>
         </main>
 

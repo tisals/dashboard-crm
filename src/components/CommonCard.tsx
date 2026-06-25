@@ -29,6 +29,7 @@ interface CommonCardProps {
   tags?: (TagItem | ReactNode)[]
   actions?: ReactNode[] // Principal buttons/actions at the bottom
   menuItems?: MenuItem[] // Dropdown actions
+  actionSlot?: ReactNode // Slot for inline action buttons (e.g. "+ Seguimiento" hover button)
   onClick?: () => void
 }
 
@@ -42,6 +43,7 @@ export function CommonCard({
   tags = [],
   actions = [],
   menuItems = [],
+  actionSlot,
   onClick,
 }: CommonCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -107,7 +109,9 @@ export function CommonCard({
           </div>
         </div>
 
-        {/* Dropdown Menu */}
+        {/* Dropdown Menu + optional actionSlot (inline action button next to menu) */}
+        <div className="flex items-center gap-1">
+        {actionSlot}
         {menuItems.length > 0 && (
           <div className="relative flex-shrink-0" ref={menuRef}>
             <button
@@ -140,6 +144,7 @@ export function CommonCard({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Info Items */}
