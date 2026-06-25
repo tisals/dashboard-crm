@@ -13,14 +13,20 @@ import {
   Calendar,
   MessageSquare,
   MoreHorizontal,
+  CalendarPlus,
+  Download,
+  Building2,
+  Briefcase,
 } from 'lucide-react'
 import {
   getSeguimientos,
   createSeguimiento,
   updateSeguimiento,
   deleteSeguimiento,
+  downloadIcsUrl,
 } from '../api/crmApi'
 import type { Seguimiento, SeguimientoTipo, SeguimientoEstado } from '../api/types'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 const TIPO_OPTIONS: { value: string; label: string; icon: typeof Phone }[] = [
   { value: '', label: 'Todos', icon: MoreHorizontal },
@@ -84,6 +90,14 @@ const EMPTY_FILTERS: FiltersState = {
 export function SeguimientosPage() {
   const queryClient = useQueryClient()
   const [filters, setFilters] = useState<FiltersState>(EMPTY_FILTERS)
+  // Local input state for debounced search (does NOT trigger query per keystroke)
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 1000)
+  // Sync debounced value to filters (one-way: debounced → filters)
+  if (debouncedSearch !== filters.search) {
+    setFilters(prev => (prev.search === debouncedSearch ? prev : { ...prev, search: debouncedSearch }))
+  }
+
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeguimiento, setEditingSeguimiento] = useState<Seguimiento | null>(null)
 
@@ -97,16 +111,35 @@ export function SeguimientosPage() {
       fecha_hasta: filters.fecha_hasta || undefined,
       per_page: 50,
     }),
+    placeholderData: (prev) => prev, // Keep previous data while fetching
   })
 
   const allSeguimientos = seguimientosData?.data?.data ?? []
 
-  // Client-side search filter
-  const seguimientos = filters.search
-    ? allSeguimientos.filter(s =>
-        s.notas?.toLowerCase().includes(filters.search.toLowerCase()) ?? false,
-      )
+  // Server filters by tipo/estado/fechas; the search input is debounced and
+  // sent as the `search` field. If the backend ignores search, fall back to
+  // client-side matching on notas.
+  const filteredBySearch = filters.search
+    ? allSeguimientos.filter(s => {
+        const q = filters.search.toLowerCase()
+        return (
+          s.notas?.toLowerCase().includes(q) ||
+          s.entidad_nombre?.toLowerCase().includes(q) ||
+          s.oportunidad_codigo?.toLowerCase().includes(q) ||
+          s.contacto_nombre?.toLowerCase().includes(q)
+        )
+      })
     : allSeguimientos
+
+  // Group by estado for the cards view (Pendiente → Agendado → Completado → Cancelado).
+  // "Agendado" = Pendiente with fecha > today.
+  const today = new Date().toISOString().slice(0, 10)
+  const grouped = {
+    Agendado: filteredBySearch.filter(s => s.estado === 'Pendiente' && s.fecha > today),
+    Pendiente: filteredBySearch.filter(s => s.estado === 'Pendiente' && s.fecha <= today),
+    Completado: filteredBySearch.filter(s => s.estado === 'Completado'),
+    Cancelado: filteredBySearch.filter(s => s.estado === 'Cancelado'),
+  }
 
   // Stats
   const stats = {
@@ -213,14 +246,14 @@ export function SeguimientosPage() {
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Search */}
+          {/* Search — debounced 1s via useDebouncedValue; this input is local */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              value={filters.search}
-              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
-              placeholder="Buscar en notas..."
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Buscar en notas, empresa, oportunidad..."
               className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 placeholder-slate-500 text-sm focus:outline-none focus:border-teal-500"
             />
           </div>
@@ -265,22 +298,23 @@ export function SeguimientosPage() {
         </div>
       </div>
 
-      {/* Seguimientos List */}
-      <div className="space-y-3">
+      {/* Seguimientos List — T-FE-08: cards grouped by estado (Agendado / Pendiente / Completado / Cancelado) */}
+      <div className="space-y-6">
         {isLoading ? (
-          // Loading skeletons
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-4 animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-6 bg-slate-700 rounded-lg" />
-                <div className="w-24 h-4 bg-slate-700 rounded" />
-                <div className="flex-1 h-4 bg-slate-700 rounded" />
-                <div className="w-20 h-6 bg-slate-700 rounded-lg" />
+          // Loading skeletons (no full page unmount)
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-6 bg-slate-700 rounded-lg" />
+                  <div className="w-24 h-4 bg-slate-700 rounded" />
+                  <div className="flex-1 h-4 bg-slate-700 rounded" />
+                  <div className="w-20 h-6 bg-slate-700 rounded-lg" />
+                </div>
               </div>
-            </div>
-          ))
-        ) : seguimientos.length === 0 ? (
-          // Empty state
+            ))}
+          </div>
+        ) : filteredBySearch.length === 0 ? (
           <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
             <Calendar size={48} className="mx-auto text-slate-600 mb-3" />
             <p className="text-slate-400 text-lg font-medium">No se encontraron seguimientos</p>
@@ -299,17 +333,40 @@ export function SeguimientosPage() {
             )}
           </div>
         ) : (
-          seguimientos.map((s) => (
-            <SeguimientoRow
-              key={s.id}
-              seguimiento={s}
-              onCompletar={() => handleCompletar(s.id)}
-              onEdit={() => setEditingSeguimiento(s)}
-              onDelete={() => handleEliminar(s.id)}
-              isCompleting={updateMutation.isPending}
-              isDeleting={deleteMutation.isPending}
-            />
-          ))
+          <>
+            {(['Agendado', 'Pendiente', 'Completado', 'Cancelado'] as const).map((estadoGroup) => {
+              const items = grouped[estadoGroup]
+              if (items.length === 0) return null
+              return (
+                <section key={estadoGroup}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className={`text-sm font-semibold uppercase tracking-wide ${
+                      estadoGroup === 'Agendado' ? 'text-cyan-400' :
+                      estadoGroup === 'Pendiente' ? 'text-amber-400' :
+                      estadoGroup === 'Completado' ? 'text-emerald-400' :
+                      'text-red-400'
+                    }`}>
+                      {estadoGroup === 'Agendado' && <CalendarPlus size={14} className="inline mr-1.5" />}
+                      {estadoGroup} ({items.length})
+                    </h2>
+                  </div>
+                  <div className="space-y-3">
+                    {items.map((s) => (
+                      <SeguimientoRow
+                        key={s.id}
+                        seguimiento={s}
+                        onCompletar={() => handleCompletar(s.id)}
+                        onEdit={() => setEditingSeguimiento(s)}
+                        onDelete={() => handleEliminar(s.id)}
+                        isCompleting={updateMutation.isPending}
+                        isDeleting={deleteMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
+          </>
         )}
       </div>
 
@@ -406,6 +463,16 @@ function SeguimientoRow({
                 <Check size={16} />
               </button>
             )}
+            {/* T-FE-09: ICS export button — opens the .ics file for Outlook/Google Calendar */}
+            <a
+              href={downloadIcsUrl(seguimiento.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Exportar a calendario (.ics)"
+              className="p-1.5 rounded-lg hover:bg-teal-500/20 text-slate-400 hover:text-teal-400 transition-colors"
+            >
+              <Download size={16} />
+            </a>
             <button
               onClick={onEdit}
               title="Editar"

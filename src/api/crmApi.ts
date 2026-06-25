@@ -284,6 +284,35 @@ export async function getSeguimientos(params?: {
   return data
 }
 
+// T-FE-02: shortcut for the current user's seguimientos, scoped by rol
+export async function getMisSeguimientos(params?: {
+  search?: string
+  estado?: string
+  fecha_desde?: string
+  fecha_hasta?: string
+  tipo?: string
+  page?: number
+  per_page?: number
+}) {
+  const { data } = await crmApi.get<ApiResponse<{ data: Seguimiento[]; total: number }>>(
+    '/seguimientos/mios',
+    { params },
+  )
+  return data
+}
+
+// T-FE-03: calendar payload for a user in a given month
+export async function getCalendarioUsuario(usuarioId: number, mes: string): Promise<{
+  mes: string
+  dias: Record<string, Seguimiento[]>
+}> {
+  const { data } = await crmApi.get<ApiResponse<{ mes: string; dias: Record<string, Seguimiento[]> }>>(
+    `/usuarios/${usuarioId}/calendario`,
+    { params: { mes } },
+  )
+  return data.data
+}
+
 // Registrar acción (llamada/correo/reunión) + programar próximo seguimiento
 // POST /contacto/{id}/acciones
 export async function contactoAcciones(contactoId: number, payload: ContactoAccionPayload) {
