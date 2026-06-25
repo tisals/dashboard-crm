@@ -133,6 +133,7 @@ export async function getOportunidades(params?: {
   per_page?: number
   sort_by?: string
   sort_order?: 'asc' | 'desc'
+  is_latest?: boolean
 }) {
   const { data } = await crmApi.get<ApiResponse<{ data: Oportunidad[] } & PaginationInfo>>('/oportunidades', { params })
   return data

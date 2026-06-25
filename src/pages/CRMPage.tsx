@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query'
 import { useSearchParams, useOutletContext } from 'react-router-dom'
 import {
   DndContext,
@@ -53,6 +53,7 @@ import { ActionButtons } from '../components/ActionButtons'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 import { SlidePanel } from '../components/SlidePanel'
 import { SendQuoteModal } from '../components/SendQuoteModal'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 // ── Display mapping: maestros name → internal estado string ──
 
@@ -306,9 +307,11 @@ interface FilterBarProps {
   entidadName?: string
   productos?: Producto[]
   estadosOptions: Column[]
+  inputSearch?: string
+  onSearchChange?: (v: string) => void
 }
 
-const FilterBar = memo(function FilterBar({ filters, onChange, entidadName, productos, estadosOptions }: FilterBarProps) {
+const FilterBar = memo(function FilterBar({ filters, onChange, entidadName, productos, estadosOptions, inputSearch, onSearchChange }: FilterBarProps) {
   const [showEntidadSearch, setShowEntidadSearch] = useState(false)
   const [entidadSearch, setEntidadSearch] = useState('')
   const [entidadResults, setEntidadResults] = useState<Entidad[]>([])
@@ -338,8 +341,11 @@ const FilterBar = memo(function FilterBar({ filters, onChange, entidadName, prod
         <input
           type="text"
           placeholder="Buscar por código o cliente..."
-          value={filters.search}
-          onChange={e => onChange({ ...filters, search: e.target.value })}
+          value={inputSearch ?? filters.search}
+          onChange={e => {
+            if (onSearchChange) onSearchChange(e.target.value)
+            else onChange({ ...filters, search: e.target.value })
+          }}
           className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
         />
       </div>
@@ -731,6 +737,14 @@ export function CRMPage() {
     pipeline_id: selectedPipelineId,
   })
 
+  // Input value is local + immediate; filters.search is debounced so the
+  // query only refires after the user stops typing.
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 1000)
+  useEffect(() => {
+    setFilters(prev => (prev.search === debouncedSearch ? prev : { ...prev, search: debouncedSearch }))
+  }, [debouncedSearch])
+
   // Sync pipeline from CRMLayout context into filters
   useEffect(() => {
     setFilters(prev => ({ ...prev, pipeline_id: selectedPipelineId }))
@@ -857,6 +871,7 @@ export function CRMPage() {
         per_page: PER_PAGE,
         sort_by: sortBy,
         sort_order: sortOrder,
+        is_latest: true,
       })
       return res
     },
@@ -866,6 +881,7 @@ export function CRMPage() {
       const loaded = allPages.length * PER_PAGE
       return loaded < total ? allPages.length + 1 : undefined
     },
+    placeholderData: keepPreviousData,
   })
 
   const oportunidades: Oportunidad[] = oportunidadesPages?.pages.flatMap(p => p.data?.data ?? []) ?? []
@@ -1162,6 +1178,22 @@ export function CRMPage() {
     enabled: !!selectedOportunidadId,
   })
 
+  // Historial de versiones: base codigo (sin sufijo -V{N}) + todas las versiones
+  const baseCodigo = selectedOpp?.codigo?.replace(/-V\d+$/i, '') ?? ''
+  const { data: historyData } = useQuery({
+    queryKey: ['oportunidades', 'history', baseCodigo],
+    queryFn: () => getOportunidades({
+      search: baseCodigo || undefined,
+      is_latest: false,
+      per_page: 50,
+      sort_by: 'version',
+      sort_order: 'desc',
+    }),
+    enabled: !!selectedOpp,
+  })
+  const historyVersiones: Oportunidad[] = historyData?.data?.data ?? []
+  const showHistory = historyVersiones.length > 1
+
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as number)
   }
@@ -1285,19 +1317,6 @@ export function CRMPage() {
     await saveForm.mutateAsync({ id: selectedOportunidadId, formData: data })
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 bg-slate-800 rounded animate-pulse" />
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-72 h-64 bg-slate-800 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
@@ -1327,6 +1346,8 @@ export function CRMPage() {
         onChange={handleFilterChange}
         productos={productos}
         estadosOptions={columns}
+        inputSearch={searchInput}
+        onSearchChange={setSearchInput}
       />
 
       {/* Bulk Actions Bar */}
@@ -1352,8 +1373,33 @@ export function CRMPage() {
         </div>
       )}
 
-      {/* Kanban */}
-      {view === 'kanban' ? (
+      {/* Kanban / List */}
+      {isLoading ? (
+        view === 'kanban' ? (
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-4 px-4">
+            {columns.length > 0 ? columns.map(col => (
+              <div key={col.id} className="flex-shrink-0 w-72">
+                <div className={`px-3 py-2 rounded-t-xl ${col.color} opacity-60 text-white font-medium text-sm`}>
+                  <span>{col.label}</span>
+                </div>
+                <div className="bg-slate-800 rounded-b-xl p-3 min-h-64 space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-20 bg-slate-700/60 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            )) : [...Array(6)].map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-72 h-64 bg-slate-800 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-12 border-b border-slate-700/50 bg-slate-800 animate-pulse" />
+            ))}
+          </div>
+        )
+      ) : view === 'kanban' ? (
         <DndContext
           sensors={sensors}
           collisionDetection={kanbanCollisionDetection}
@@ -1801,6 +1847,76 @@ export function CRMPage() {
                   </div>
                 )}
               </div>
+
+              {/* Historial de versiones (collapsible) */}
+              {showHistory && (
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('historial')}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-750 transition-colors"
+                  >
+                    <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                      <FileText size={14} />
+                      Historial de versiones
+                      <span className="px-1.5 py-0.5 bg-slate-700 rounded text-[10px] text-slate-300 font-medium">
+                        {historyVersiones.length}
+                      </span>
+                    </h3>
+                    {collapsedSections.has('historial') ? (
+                      <ChevronRight size={16} className="text-slate-500" />
+                    ) : (
+                      <ChevronDown size={16} className="text-slate-500" />
+                    )}
+                  </button>
+                  {!collapsedSections.has('historial') && (
+                    <div className="border-t border-slate-700 divide-y divide-slate-700/60">
+                      {historyVersiones.map(v => {
+                        const isCurrent = v.id === selectedOpp?.id
+                        return (
+                          <div key={v.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-700/30">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-200 text-sm font-medium truncate">{v.codigo}</span>
+                                <span className="px-1.5 py-0.5 bg-slate-700 rounded text-[10px] text-slate-300 font-medium">
+                                  v{v.version ?? 1}
+                                </span>
+                                {v.is_latest && (
+                                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-[10px] font-medium">
+                                    Última
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                                <span>{v.estado}</span>
+                                <span>·</span>
+                                <span>{v.updated_at ? new Date(v.updated_at).toLocaleDateString('es-ES') : '—'}</span>
+                                {v.valor != null && v.valor > 0 && (
+                                  <>
+                                    <span>·</span>
+                                    <span className="text-teal-400">
+                                      ${Number(v.valor).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            {isCurrent ? (
+                              <span className="text-[10px] text-slate-500 ml-2">Actual</span>
+                            ) : (
+                              <button
+                                onClick={() => setSelectedOportunidadId(v.id)}
+                                className="text-xs text-teal-400 hover:text-teal-300 ml-2"
+                              >
+                                Ver esta versión
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Seguimientos Timeline */}
               <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">

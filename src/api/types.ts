@@ -128,6 +128,9 @@ export interface Oportunidad {
   entidad_nombre?: string
   entidad_identificacion?: string
   valor?: number
+  parent_id?: number | null
+  version?: number
+  is_latest?: boolean
   detalles?: Array<{
     id: number
     producto_id: number
