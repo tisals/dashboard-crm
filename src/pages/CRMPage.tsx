@@ -285,7 +285,7 @@ function KanbanColumn({
   const totalMonto = oportunidades.reduce((sum, op) => sum + (Number(op.valor) || 0), 0)
 
   return (
-    <div className="flex-shrink-0 w-72" ref={setNodeRef}>
+    <div className="flex-shrink-0 w-72 min-w-[18rem]" ref={setNodeRef}>
       <div className={`px-3 py-2 rounded-t-xl ${column.color} text-white font-medium text-sm flex items-center justify-between`}>
         <span>{column.label}</span>
         <div className="flex items-center gap-1.5 bg-white/20 px-2 py-0.5 rounded-full text-xs">
@@ -1453,7 +1453,10 @@ export function CRMPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-4 px-4">
+          <div
+            className="flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-4 px-4 min-w-full"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: '#475569 #1e293b' }}
+          >
             {columns.map(col => (
               <KanbanColumn
                 key={col.id}

@@ -22,6 +22,7 @@ import { ContactosPage } from './pages/ContactosPage'
 import { CiudadesPage } from './pages/CiudadesPage'
 import { ProductosPage } from './pages/ProductosPage'
 import { MaestrosPage } from './pages/MaestrosPage'
+import { SeguimientosPage } from './pages/SeguimientosPage'
 import { SeguimientoCalendarioPage } from './pages/SeguimientoCalendarioPage'
 import './index.css'
 
@@ -95,7 +96,7 @@ function ProtectedLayout() {
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <Header onMenuToggle={() => setMobileMenuOpen(prev => !prev)} mobileMenuOpen={mobileMenuOpen} />
 
-        <main className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-20 md:pb-4">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -118,6 +119,7 @@ function ProtectedLayout() {
             <Route path="/maestros" element={<MaestrosPage />} />
             <Route path="/erp" element={<DashboardPage />} />
             <Route path="/seguimientos/calendario" element={<SeguimientoCalendarioPage />} />
+            <Route path="/seguimientos" element={<SeguimientosPage />} />
           </Routes>
         </main>
 

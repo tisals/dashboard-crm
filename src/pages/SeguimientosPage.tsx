@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search,
@@ -14,6 +15,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   CalendarPlus,
+  CalendarDays,
   Download,
   Building2,
   Briefcase,
@@ -205,13 +207,22 @@ export function SeguimientosPage() {
           <h1 className="text-2xl font-bold text-slate-50">Seguimientos</h1>
           <p className="text-slate-400">Gestión de llamadas, correos, reuniones y notas</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-xl transition-colors"
-        >
-          <Plus size={18} />
-          Nuevo Seguimiento
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/seguimientos/calendario"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl transition-colors border border-slate-700"
+          >
+            <CalendarDays size={18} />
+            Ver calendario
+          </Link>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-xl transition-colors"
+          >
+            <Plus size={18} />
+            Nuevo Seguimiento
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

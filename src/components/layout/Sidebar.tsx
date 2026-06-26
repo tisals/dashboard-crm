@@ -68,7 +68,7 @@ interface GroupDef {
 const GROUPS: GroupDef[] = [
   {
     label: 'CRM',
-    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES],
+    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES, MODULES.SEGUIMIENTOS],
   },
   {
     label: 'ERP',
@@ -85,6 +85,7 @@ function moduleToPath(module: string): string {
   if (module === MODULES.ERP_DASHBOARD) return '/erp'
   if (module === MODULES.PIPELINES) return '/crm/pipelines'
   if (module === MODULES.CRM) return '/crm/oportunidad'
+  if (module === MODULES.SEGUIMIENTOS) return '/seguimientos'
   return `/${module}`
 }
 
