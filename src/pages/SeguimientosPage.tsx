@@ -368,7 +368,7 @@ export function SeguimientosPage() {
                       {estadoGroup} ({items.length})
                     </h2>
                   </div>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((s) => (
                       <SeguimientoRow
                         key={s.id}
@@ -407,7 +407,7 @@ export function SeguimientosPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="font-semibold text-slate-200">
-                  {viewingSeguimiento.entidad_nombre || viewingSeguimiento.contacto_nombre || `Seguimiento #${viewingSeguimiento.id}`}
+                  {`Seguimiento #${viewingSeguimiento.id}`}
                 </h2>
                 <p className="text-sm text-slate-400">
                   {viewingSeguimiento.tipo} · {formatDate(viewingSeguimiento.fecha)}
@@ -577,7 +577,7 @@ function SeguimientoRow({
 
   return (
     <CommonCard
-      title={seguimiento.entidad_nombre || seguimiento.contacto_nombre || `Seguimiento #${seguimiento.id}`}
+      title={`Seguimiento #${seguimiento.id}`}
       subtitle={`${seguimiento.tipo} · ${formatDate(seguimiento.fecha)}${seguimiento.hora ? ' ' + seguimiento.hora : ''}`}
       avatarText={seguimiento.entidad_nombre?.[0] || seguimiento.contacto_nombre?.[0] || 'S'}
       avatarColor={
@@ -585,8 +585,21 @@ function SeguimientoRow({
         seguimiento.estado === 'Cancelado' ? 'bg-red-900/60 text-red-400' :
         'bg-amber-900/60 text-amber-400'
       }
-      info1={seguimiento.oportunidad_codigo ? { icon: <Briefcase size={12} />, text: seguimiento.oportunidad_codigo } : undefined}
-      info2={seguimiento.notas ? { icon: tipoIconMap[seguimiento.tipo], text: seguimiento.notas } : undefined}
+      info1={
+        seguimiento.entidad_nombre || seguimiento.contacto_nombre
+          ? {
+              icon: <Building2 size={12} />,
+              text: seguimiento.entidad_nombre
+                ? `E: ${seguimiento.entidad_nombre}${seguimiento.contacto_nombre ? ` / C: ${seguimiento.contacto_nombre}` : ''}`
+                : `C: ${seguimiento.contacto_nombre}`,
+            }
+          : undefined
+      }
+      info2={
+        seguimiento.oportunidad_codigo
+          ? { icon: <Briefcase size={12} />, text: `Oportunidad: ${seguimiento.oportunidad_codigo}` }
+          : undefined
+      }
       tags={tags}
       menuItems={menuItems}
       onClick={onView}

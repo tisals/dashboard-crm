@@ -1473,45 +1473,52 @@ export function CRMPage() {
           </div>
         )
       ) : view === 'kanban' ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={kanbanCollisionDetection}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          {/* Kanban scroll container. The native scrollbar is hidden — a
-              sticky bottom "shim" below provides a persistent scrollbar
-              that's always visible regardless of vertical scroll position. */}
-          <div
-            ref={kanbanScrollRef}
-            onScroll={(e) => {
-              const sl = e.currentTarget.scrollLeft
-              setKanbanScrollLeft(sl)
-              if (kanbanShimRef.current) kanbanShimRef.current.scrollLeft = sl
-            }}
-            className="kanban-scroll-container flex gap-3 md:gap-4 overflow-x-auto -mx-4 px-4 pt-2 pb-1 min-w-full"
+        <>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={kanbanCollisionDetection}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
-            {columns.map(col => (
-              <KanbanColumn
-                key={col.id}
-                column={col}
-                oportunidades={byEstado[col.id] ?? []}
-                onClone={(id) => clonar.mutate(id)}
-                onVersionar={(id) => crearVersion.mutate(id)}
-                onGanar={(id) => ganar.mutate(id)}
-                onDelete={isAdmin ? handleDeleteOportunidad : undefined}
-                onCardClick={handleCardClick}
-                selectedOppIds={selectedOppIds}
-                onToggleSelect={handleToggleSelect}
-                onAddSeguimiento={handleAddSeguimiento}
-              />
-            ))}
-          </div>
+            <div
+              ref={kanbanScrollRef}
+              onScroll={(e) => {
+                const sl = e.currentTarget.scrollLeft
+                setKanbanScrollLeft(sl)
+                if (kanbanShimRef.current) kanbanShimRef.current.scrollLeft = sl
+              }}
+              className="kanban-scroll-container flex gap-3 md:gap-4 overflow-x-auto -mx-4 px-4 pt-2 pb-0 min-w-full"
+            >
+              {columns.map(col => (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  oportunidades={byEstado[col.id] ?? []}
+                  onClone={(id) => clonar.mutate(id)}
+                  onVersionar={(id) => crearVersion.mutate(id)}
+                  onGanar={(id) => ganar.mutate(id)}
+                  onDelete={isAdmin ? handleDeleteOportunidad : undefined}
+                  onCardClick={handleCardClick}
+                  selectedOppIds={selectedOppIds}
+                  onToggleSelect={handleToggleSelect}
+                  onAddSeguimiento={handleAddSeguimiento}
+                />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeOportunidad && (
+                <div className="bg-slate-600 p-3 rounded-xl w-72 shadow-xl opacity-90">
+                  <p className="font-medium text-slate-200 text-sm">{activeOportunidad.codigo}</p>
+                  <p className="text-slate-400 text-xs truncate">{activeOportunidad.entidad_nombre ?? `#${activeOportunidad.entidad_id}`}</p>
+                  <p className="text-slate-500 text-[10px]">{activeOportunidad.entidad_identificacion ?? ''}</p>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
 
-          {/* Sticky bottom scrollbar shim. Always visible. Minimal height,
-              no gradient, above card interactive elements (z-30). */}
+          {/* Shim fuera de DndContext para que sticky funcione contra el viewport */}
           <div
-            className="sticky bottom-0 -mx-4 px-4 z-30 bg-slate-900"
+            className="sticky bottom-0 z-30 bg-slate-900 -mx-4 px-4"
             style={{ pointerEvents: kanbanMaxScroll > 0 ? 'auto' : 'none' }}
           >
             <div
@@ -1533,16 +1540,7 @@ export function CRMPage() {
               />
             </div>
           </div>
-          <DragOverlay>
-            {activeOportunidad && (
-              <div className="bg-slate-600 p-3 rounded-xl w-72 shadow-xl opacity-90">
-                <p className="font-medium text-slate-200 text-sm">{activeOportunidad.codigo}</p>
-                <p className="text-slate-400 text-xs truncate">{activeOportunidad.entidad_nombre ?? `#${activeOportunidad.entidad_id}`}</p>
-                <p className="text-slate-500 text-[10px]">{activeOportunidad.entidad_identificacion ?? ''}</p>
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+        </>
       ) : (
          /* ── List View ── */
         <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden overflow-x-auto">
