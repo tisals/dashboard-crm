@@ -766,22 +766,6 @@ export function CRMPage() {
   const kanbanShimRef = useRef<HTMLDivElement | null>(null)
   const [kanbanMaxScroll, setKanbanMaxScroll] = useState(0)
   const [kanbanScrollLeft, setKanbanScrollLeft] = useState(0)
-  useEffect(() => {
-    const el = kanbanScrollRef.current
-    if (!el) return
-    function recompute() {
-      if (!el) return
-      setKanbanMaxScroll(Math.max(0, el.scrollWidth - el.clientWidth))
-    }
-    recompute()
-    const ro = new ResizeObserver(recompute)
-    ro.observe(el)
-    window.addEventListener('resize', recompute)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', recompute)
-    }
-  }, [byEstado])
   const { user } = useAuth()
   const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
 
@@ -963,6 +947,25 @@ export function CRMPage() {
     () => oportunidades.find(o => o.id === activeId),
     [oportunidades, activeId],
   )
+
+  // Recompute kanban max-scroll when opportunities change (must be after
+  // byEstado/oportunidades are declared to avoid TDZ ReferenceError).
+  useEffect(() => {
+    const el = kanbanScrollRef.current
+    if (!el) return
+    function recompute() {
+      if (!el) return
+      setKanbanMaxScroll(Math.max(0, el.scrollWidth - el.clientWidth))
+    }
+    recompute()
+    const ro = new ResizeObserver(recompute)
+    ro.observe(el)
+    window.addEventListener('resize', recompute)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', recompute)
+    }
+  }, [byEstado])
 
   const updateEstado = useMutation({
     mutationFn: ({ id, pipeline_etapa_id }: { id: number; pipeline_etapa_id: number }) =>
