@@ -1508,11 +1508,10 @@ export function CRMPage() {
             ))}
           </div>
 
-          {/* Sticky bottom scrollbar shim. Always visible. Drag it to scroll
-              the kanban. The inner div's width matches the kanban content
-              width so the thumb position is accurate. */}
+          {/* Sticky bottom scrollbar shim. Always visible. Minimal height,
+              no gradient, above card interactive elements (z-30). */}
           <div
-            className="sticky bottom-0 -mx-4 px-4 pt-1 pb-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+            className="sticky bottom-0 -mx-4 px-4 z-30 bg-slate-900"
             style={{ pointerEvents: kanbanMaxScroll > 0 ? 'auto' : 'none' }}
           >
             <div
@@ -1522,7 +1521,7 @@ export function CRMPage() {
                 if (kanbanScrollRef.current) kanbanScrollRef.current.scrollLeft = sl
                 setKanbanScrollLeft(sl)
               }}
-              className="overflow-x-auto h-4 rounded bg-slate-800/60 border border-slate-700/60"
+              className="overflow-x-auto h-1.5 rounded-full bg-slate-800/60 border border-slate-700/60"
               style={{ scrollbarWidth: 'thin', scrollbarColor: '#64748b #1e293b' }}
               aria-hidden="true"
             >
@@ -1533,14 +1532,6 @@ export function CRMPage() {
                 }}
               />
             </div>
-            {/* Position indicator: shows current scroll position */}
-            {kanbanMaxScroll > 0 && (
-              <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1 px-1">
-                <span>Inicio</span>
-                <span>{Math.round((kanbanScrollLeft / kanbanMaxScroll) * 100)}%</span>
-                <span>Fin</span>
-              </div>
-            )}
           </div>
           <DragOverlay>
             {activeOportunidad && (

@@ -1,29 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { getCalendarioUsuario } from '../api/crmApi'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Users } from 'lucide-react'
+import { getCalendarioUsuario, getUsuarios } from '../api/crmApi'
 import type { Seguimiento } from '../api/types'
 import { getMonthMatrix, dateKey, shiftMonth } from '../utils/calendar'
-
-interface SeguimientoCalendarioPageProps {
-  /** Current user id (defaults to "me"). Admins may pass other user ids. */
-  initialUsuarioId?: number
-  /** When true, show a user picker (admin feature). */
-  allowUserPicker?: boolean
-  /** List of users to pick from (when allowUserPicker=true). */
-  availableUsers?: { id: number; nombre: string }[]
-}
+import { useAuth } from '../context/AuthContext'
 
 const DAYS_OF_WEEK = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
-export function SeguimientoCalendarioPage({
-  initialUsuarioId,
-  allowUserPicker = false,
-  availableUsers = [],
-}: SeguimientoCalendarioPageProps = {}) {
+export function SeguimientoCalendarioPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
+
   // currentMes format: YYYY-MM
   const [currentMes, setCurrentMes] = useState(() => new Date().toISOString().slice(0, 7))
-  const [selectedUsuarioId, setSelectedUsuarioId] = useState<number | null>(initialUsuarioId ?? null)
+
+  // Non-admin: auto-set to own user (calendar loads immediately).
+  // Admin: defaults to own ID (shows ALL seguimientos because scopeByUser
+  // passes through for admin role), user picker overrides.
+  const [selectedUsuarioId, setSelectedUsuarioId] = useState<number | null>(
+    user?.id ?? null,
+  )
+  // Sync when auth loads (e.g. page refresh where user resolves async)
+  useEffect(() => {
+    if (user?.id && selectedUsuarioId === null) {
+      setSelectedUsuarioId(user.id)
+    }
+  }, [user?.id])
+
+  // Fetch user list for admin picker
+  const { data: usuariosRes } = useQuery({
+    queryKey: ['usuarios', 'list-active'],
+    queryFn: () => getUsuarios({ per_page: 100 }),
+    enabled: isAdmin,
+  })
+  const availableUsers: { id: number; nombre: string }[] = (usuariosRes?.data as any[])?.map((u: any) => ({ id: u.id, nombre: u.nombre })) ?? []
 
   const { data, isLoading } = useQuery({
     queryKey: ['calendario', selectedUsuarioId, currentMes],
@@ -51,17 +62,21 @@ export function SeguimientoCalendarioPage({
         </div>
 
         <div className="flex items-center gap-2">
-          {allowUserPicker && availableUsers.length > 0 && (
-            <select
-              value={selectedUsuarioId ?? ''}
-              onChange={(e) => setSelectedUsuarioId(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-            >
-              <option value="">— Seleccionar usuario —</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.nombre}</option>
-              ))}
-            </select>
+          {/* Admin user picker — defaults to own ID (shows ALL), explicit user overrides */}
+          {isAdmin && (
+            <div className="flex items-center gap-1.5">
+              <Users size={16} className="text-slate-500" />
+              <select
+                value={selectedUsuarioId ?? ''}
+                onChange={(e) => setSelectedUsuarioId(e.target.value ? Number(e.target.value) : user!.id)}
+                className="px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+              >
+                <option value={user!.id}>Todos los usuarios</option>
+                {availableUsers.filter(u => u.id !== user!.id).map((u) => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
           )}
 
           <button
@@ -104,10 +119,8 @@ export function SeguimientoCalendarioPage({
         </div>
 
         {/* Day cells */}
-        {isLoading || !selectedUsuarioId ? (
-          <div className="p-12 text-center text-slate-500">
-            {selectedUsuarioId ? 'Cargando...' : 'Seleccioná un usuario para ver el calendario'}
-          </div>
+        {isLoading ? (
+          <div className="p-12 text-center text-slate-500">Cargando calendario...</div>
         ) : (
           <div className="grid grid-cols-7">
             {matrix.map((row, rowIdx) =>
@@ -160,7 +173,7 @@ export function SeguimientoCalendarioPage({
       </div>
 
       {/* Empty state footer */}
-      {!isLoading && selectedUsuarioId && totalInMonth === 0 && (
+      {!isLoading && totalInMonth === 0 && (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-8 text-center">
           <CalendarIcon size={40} className="mx-auto text-slate-600 mb-2" />
           <p className="text-slate-400">No hay seguimientos pendientes en {currentMes}</p>

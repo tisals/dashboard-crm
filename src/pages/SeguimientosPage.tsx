@@ -29,6 +29,9 @@ import {
 } from '../api/crmApi'
 import type { Seguimiento, SeguimientoTipo, SeguimientoEstado } from '../api/types'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { CommonCard } from '../components/CommonCard'
+import { SlidePanel } from '../components/SlidePanel'
+import type { TagItem, MenuItem } from '../components/CommonCard'
 
 const TIPO_OPTIONS: { value: string; label: string; icon: typeof Phone }[] = [
   { value: '', label: 'Todos', icon: MoreHorizontal },
@@ -102,6 +105,7 @@ export function SeguimientosPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeguimiento, setEditingSeguimiento] = useState<Seguimiento | null>(null)
+  const [viewingSeguimiento, setViewingSeguimiento] = useState<Seguimiento | null>(null)
 
   // Fetch seguimientos with filters
   const { data: seguimientosData, isLoading } = useQuery({
@@ -369,6 +373,7 @@ export function SeguimientosPage() {
                         onCompletar={() => handleCompletar(s.id)}
                         onEdit={() => setEditingSeguimiento(s)}
                         onDelete={() => handleEliminar(s.id)}
+                        onView={() => setViewingSeguimiento(s)}
                         isCompleting={updateMutation.isPending}
                         isDeleting={deleteMutation.isPending}
                       />
@@ -381,35 +386,156 @@ export function SeguimientosPage() {
         )}
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <CreateSeguimientoModal
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={(payload) => createMutation.mutate(payload)}
-          isSubmitting={createMutation.isPending}
-        />
+      {/* Detail SlidePanel */}
+      {viewingSeguimiento && (
+        <SlidePanel open onClose={() => setViewingSeguimiento(null)} title="Detalle de Seguimiento">
+          <div className="space-y-6">
+            {/* Header info */}
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                viewingSeguimiento.estado === 'Completado' ? 'bg-emerald-900/60 text-emerald-400' :
+                viewingSeguimiento.estado === 'Cancelado' ? 'bg-red-900/60 text-red-400' :
+                'bg-amber-900/60 text-amber-400'
+              }`}>
+                {viewingSeguimiento.tipo === 'Llamada' ? <Phone size={20} /> :
+                 viewingSeguimiento.tipo === 'Correo' ? <Mail size={20} /> :
+                 viewingSeguimiento.tipo === 'Reunion' ? <Calendar size={20} /> :
+                 <MessageSquare size={20} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-slate-200">
+                  {viewingSeguimiento.entidad_nombre || viewingSeguimiento.contacto_nombre || `Seguimiento #${viewingSeguimiento.id}`}
+                </h2>
+                <p className="text-sm text-slate-400">
+                  {viewingSeguimiento.tipo} · {formatDate(viewingSeguimiento.fecha)}
+                  {viewingSeguimiento.hora && <span> {viewingSeguimiento.hora}</span>}
+                </p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={() => { setViewingSeguimiento(null); setEditingSeguimiento(viewingSeguimiento) }}
+                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+                  title="Editar"
+                >
+                  <Pencil size={15} />
+                </button>
+                <a
+                  href={downloadIcsUrl(viewingSeguimiento.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-teal-500/20 text-slate-400 hover:text-teal-400"
+                  title="Exportar .ics"
+                >
+                  <Download size={15} />
+                </a>
+              </div>
+            </div>
+
+            {/* Estado badge */}
+            <div>
+              <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${estadoBadgeClass(viewingSeguimiento.estado)}`}>
+                {viewingSeguimiento.estado}
+              </span>
+            </div>
+
+            {/* Info grid */}
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 space-y-3">
+              {viewingSeguimiento.entidad_nombre && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 size={14} className="text-slate-500 shrink-0" />
+                  <span className="text-slate-400">Entidad:</span>
+                  <span className="text-slate-200">{viewingSeguimiento.entidad_nombre}</span>
+                </div>
+              )}
+              {viewingSeguimiento.contacto_nombre && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone size={14} className="text-slate-500 shrink-0" />
+                  <span className="text-slate-400">Contacto:</span>
+                  <span className="text-slate-200">{viewingSeguimiento.contacto_nombre}</span>
+                </div>
+              )}
+              {viewingSeguimiento.oportunidad_codigo && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Briefcase size={14} className="text-slate-500 shrink-0" />
+                  <span className="text-slate-400">Oportunidad:</span>
+                  <span className="text-slate-200">{viewingSeguimiento.oportunidad_codigo}</span>
+                </div>
+              )}
+              {viewingSeguimiento.autor_nombre && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-400">Creado por:</span>
+                  <span className="text-slate-200">{viewingSeguimiento.autor_nombre}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Notas */}
+            {viewingSeguimiento.notas && (
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5">Notas</label>
+                <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+                  <p className="text-sm text-slate-300 whitespace-pre-wrap">{viewingSeguimiento.notas}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              {viewingSeguimiento.estado === 'Pendiente' && (
+                <button
+                  onClick={() => { handleCompletar(viewingSeguimiento.id); setViewingSeguimiento(null) }}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition-colors"
+                >
+                  <Check size={16} />
+                  Marcar Completado
+                </button>
+              )}
+              <button
+                onClick={() => { handleEliminar(viewingSeguimiento.id); setViewingSeguimiento(null) }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 font-medium rounded-xl transition-colors"
+              >
+                <Trash2 size={16} />
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </SlidePanel>
       )}
 
-      {/* Edit Modal */}
+      {/* Create SlidePanel */}
+      {showCreateModal && (
+        <SlidePanel open onClose={() => setShowCreateModal(false)} title="Nuevo Seguimiento">
+          <CreateSeguimientoForm
+            onSubmit={(payload) => createMutation.mutate(payload)}
+            onClose={() => setShowCreateModal(false)}
+            isSubmitting={createMutation.isPending}
+          />
+        </SlidePanel>
+      )}
+
+      {/* Edit SlidePanel */}
       {editingSeguimiento && (
-        <EditSeguimientoModal
-          seguimiento={editingSeguimiento}
-          onClose={() => setEditingSeguimiento(null)}
-          onSubmit={(payload) => updateMutation.mutate({ id: editingSeguimiento.id, payload })}
-          isSubmitting={updateMutation.isPending}
-        />
+        <SlidePanel open onClose={() => setEditingSeguimiento(null)} title="Editar Seguimiento">
+          <EditSeguimientoForm
+            seguimiento={editingSeguimiento}
+            onSubmit={(payload) => updateMutation.mutate({ id: editingSeguimiento.id, payload })}
+            onClose={() => setEditingSeguimiento(null)}
+            isSubmitting={updateMutation.isPending}
+          />
+        </SlidePanel>
       )}
     </div>
   )
 }
 
-/* ── Seguimiento Row Component ──────────────────── */
+/* ── Seguimiento Card Component ─────────────────── */
 
 function SeguimientoRow({
   seguimiento,
   onCompletar,
   onEdit,
   onDelete,
+  onView,
   isCompleting,
   isDeleting,
 }: {
@@ -417,98 +543,57 @@ function SeguimientoRow({
   onCompletar: () => void
   onEdit: () => void
   onDelete: () => void
+  onView: () => void
   isCompleting: boolean
   isDeleting: boolean
 }) {
+  const menuItems: MenuItem[] = [
+    ...(seguimiento.estado === 'Pendiente'
+      ? [{ icon: <Check size={14} />, label: 'Completar', onClick: onCompletar }]
+      : []),
+    { icon: <Download size={14} />, label: 'Exportar .ics', onClick: () => window.open(downloadIcsUrl(seguimiento.id), '_blank') },
+    { icon: <Pencil size={14} />, label: 'Editar', onClick: onEdit },
+    { icon: <Trash2 size={14} />, label: 'Eliminar', onClick: onDelete, danger: true },
+  ]
+
+  const isAgendado = seguimiento.estado === 'Pendiente' && seguimiento.fecha > new Date().toISOString().slice(0, 10)
+  const estadoVariant = seguimiento.estado === 'Completado' ? 'emerald' : seguimiento.estado === 'Cancelado' ? 'red' : isAgendado ? 'blue' : 'amber'
+
+  const tags: TagItem[] = [
+    { label: seguimiento.estado, variant: estadoVariant },
+    { label: seguimiento.tipo, variant: 'slate' },
+  ]
+
+  const tipoIconMap: Record<string, React.ReactNode> = {
+    Llamada: <Phone size={12} />,
+    Correo: <Mail size={12} />,
+    Reunion: <Calendar size={12} />,
+    Nota: <MessageSquare size={12} />,
+    Otro: <MoreHorizontal size={12} />,
+  }
+
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 hover:border-slate-600 transition-colors">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        {/* Tipo + Fecha */}
-        <div className="flex items-center gap-3 sm:w-56 shrink-0">
-          <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${tipoBadgeClass(seguimiento.tipo)}`}>
-            {seguimiento.tipo}
-          </span>
-          <span className="text-sm text-slate-400 whitespace-nowrap">
-            {formatDate(seguimiento.fecha)}
-            {seguimiento.hora && <span className="ml-1 text-slate-500">{seguimiento.hora}</span>}
-          </span>
-        </div>
-
-        {/* Notas */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-300 line-clamp-2">
-            {seguimiento.notas || <span className="text-slate-500 italic">Sin notas</span>}
-          </p>
-          {/* Related entity info */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-slate-500">
-            {seguimiento.entidad_nombre && (
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block" />
-                {seguimiento.entidad_nombre}
-              </span>
-            )}
-            {seguimiento.contacto_nombre && (
-              <span>{seguimiento.contacto_nombre}</span>
-            )}
-            {seguimiento.oportunidad_codigo && (
-              <span className="text-amber-500/70">{seguimiento.oportunidad_codigo}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Estado + Actions */}
-        <div className="flex items-center gap-2 sm:justify-end shrink-0">
-          <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${estadoBadgeClass(seguimiento.estado)}`}>
-            {seguimiento.estado}
-          </span>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-1">
-            {seguimiento.estado === 'Pendiente' && (
-              <button
-                onClick={onCompletar}
-                disabled={isCompleting}
-                title="Marcar como completado"
-                className="p-1.5 rounded-lg hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 transition-colors disabled:opacity-50"
-              >
-                <Check size={16} />
-              </button>
-            )}
-            {/* T-FE-09: ICS export button — opens the .ics file for Outlook/Google Calendar */}
-            <a
-              href={downloadIcsUrl(seguimiento.id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Exportar a calendario (.ics)"
-              className="p-1.5 rounded-lg hover:bg-teal-500/20 text-slate-400 hover:text-teal-400 transition-colors"
-            >
-              <Download size={16} />
-            </a>
-            <button
-              onClick={onEdit}
-              title="Editar"
-              className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              onClick={onDelete}
-              disabled={isDeleting}
-              title="Eliminar"
-              className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <CommonCard
+      title={seguimiento.entidad_nombre || seguimiento.contacto_nombre || `Seguimiento #${seguimiento.id}`}
+      subtitle={`${seguimiento.tipo} · ${formatDate(seguimiento.fecha)}${seguimiento.hora ? ' ' + seguimiento.hora : ''}`}
+      avatarText={seguimiento.entidad_nombre?.[0] || seguimiento.contacto_nombre?.[0] || 'S'}
+      avatarColor={
+        seguimiento.estado === 'Completado' ? 'bg-emerald-900/60 text-emerald-400' :
+        seguimiento.estado === 'Cancelado' ? 'bg-red-900/60 text-red-400' :
+        'bg-amber-900/60 text-amber-400'
+      }
+      info1={seguimiento.oportunidad_codigo ? { icon: <Briefcase size={12} />, text: seguimiento.oportunidad_codigo } : undefined}
+      info2={seguimiento.notas ? { icon: tipoIconMap[seguimiento.tipo], text: seguimiento.notas } : undefined}
+      tags={tags}
+      menuItems={menuItems}
+      onClick={onView}
+    />
   )
 }
 
-/* ── Create Seguimiento Modal ──────────────────── */
+/* ── Create Seguimiento Form (inside SlidePanel) ── */
 
-function CreateSeguimientoModal({
+function CreateSeguimientoForm({
   onClose,
   onSubmit,
   isSubmitting,
@@ -519,9 +604,12 @@ function CreateSeguimientoModal({
 }) {
   const [tipo, setTipo] = useState<SeguimientoTipo>('Llamada')
   const [notas, setNotas] = useState('')
-  const [fecha, setFecha] = useState('')
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10))
   const [hora, setHora] = useState('')
   const [estado, setEstado] = useState<SeguimientoEstado>('Pendiente')
+  const [entidadId, setEntidadId] = useState<number | undefined>(undefined)
+  const [contactoId, setContactoId] = useState<number | undefined>(undefined)
+  const [oportunidadId, setOportunidadId] = useState<number | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
@@ -536,133 +624,140 @@ function CreateSeguimientoModal({
       fecha: fecha || undefined,
       hora: hora || undefined,
       estado,
+      entidad_id: entidadId,
+      contacto_id: contactoId,
+      oportunidad_id: oportunidadId,
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-slate-200">Nuevo Seguimiento</h2>
-            <p className="text-sm text-slate-400">Registrar una nueva interacción</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
-            <X size={20} />
-          </button>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">{error}</div>
+      )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tipo */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">Tipo</label>
-            <div className="grid grid-cols-4 gap-2">
-              {([
-                { value: 'Llamada' as const, label: 'Llamada', icon: Phone },
-                { value: 'Correo' as const, label: 'Correo', icon: Mail },
-                { value: 'Reunion' as const, label: 'Reunión', icon: Calendar },
-                { value: 'Nota' as const, label: 'Nota', icon: MessageSquare },
-              ]).map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTipo(value)}
-                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
-                    tipo === value
-                      ? 'bg-teal-700 border-teal-500 text-teal-300'
-                      : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-slate-500'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="text-xs font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Notas */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">
-              Notas <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              required
-              rows={3}
-              placeholder="Detalle de la interacción..."
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500 resize-none text-sm"
-            />
-          </div>
-
-          {/* Fecha + Hora */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Fecha</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={e => setFecha(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Hora</label>
-              <input
-                type="time"
-                value={hora}
-                onChange={e => setHora(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Estado</label>
-            <select
-              value={estado}
-              onChange={e => setEstado(e.target.value as SeguimientoEstado)}
-              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-            >
-              <option value="Pendiente">Pendiente</option>
-              <option value="Completado">Completado</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
+      {/* Tipo */}
+      <div>
+        <label className="block text-sm text-slate-400 mb-2">Tipo</label>
+        <div className="grid grid-cols-4 gap-2">
+          {([
+            { value: 'Llamada' as const, label: 'Llamada', icon: Phone },
+            { value: 'Correo' as const, label: 'Correo', icon: Mail },
+            { value: 'Reunion' as const, label: 'Reunión', icon: Calendar },
+            { value: 'Nota' as const, label: 'Nota', icon: MessageSquare },
+          ]).map(({ value, label, icon: Icon }) => (
             <button
+              key={value}
               type="button"
-              onClick={onClose}
-              className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition-colors"
+              onClick={() => setTipo(value)}
+              className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                tipo === value
+                  ? 'bg-teal-700 border-teal-500 text-teal-300'
+                  : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-slate-500'
+              }`}
             >
-              Cancelar
+              <Icon size={18} />
+              <span className="text-xs font-medium">{label}</span>
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors"
-            >
-              {isSubmitting ? 'Guardando...' : 'Crear Seguimiento'}
-            </button>
-          </div>
-        </form>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Entidad + Contacto + Oportunidad */}
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Entidad ID</label>
+          <input
+            type="number"
+            value={entidadId ?? ''}
+            onChange={e => setEntidadId(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="ID entidad"
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Contacto ID</label>
+          <input
+            type="number"
+            value={contactoId ?? ''}
+            onChange={e => setContactoId(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="ID contacto"
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Oportunidad ID</label>
+          <input
+            type="number"
+            value={oportunidadId ?? ''}
+            onChange={e => setOportunidadId(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="ID oportunidad"
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+      </div>
+
+      {/* Fecha + Hora */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Fecha</label>
+          <input
+            type="date"
+            value={fecha}
+            onChange={e => setFecha(e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Hora</label>
+          <input
+            type="time"
+            value={hora}
+            onChange={e => setHora(e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+      </div>
+
+      {/* Notas */}
+      <div>
+        <label className="block text-sm text-slate-400 mb-1.5">
+          Notas <span className="text-red-400">*</span>
+        </label>
+        <textarea
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          required
+          rows={4}
+          placeholder="Detalle de la interacción..."
+          className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500 resize-none text-sm"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors"
+        >
+          {isSubmitting ? 'Guardando...' : 'Crear Seguimiento'}
+        </button>
+      </div>
+    </form>
   )
 }
 
-/* ── Edit Seguimiento Modal ────────────────────── */
+/* ── Edit Seguimiento Form (inside SlidePanel) ─── */
 
-function EditSeguimientoModal({
+function EditSeguimientoForm({
   seguimiento,
   onClose,
   onSubmit,
@@ -670,7 +765,7 @@ function EditSeguimientoModal({
 }: {
   seguimiento: Seguimiento
   onClose: () => void
-  onSubmit: (payload: Partial<{ tipo: string; notas: string; fecha: string; hora: string; estado: string }>) => void
+  onSubmit: (payload: Partial<{ tipo: string; notas: string; fecha: string; hora: string; estado: string; oportunidad_id?: number; contacto_id?: number; entidad_id?: number }>) => void
   isSubmitting: boolean
 }) {
   const [tipo, setTipo] = useState<SeguimientoTipo>(seguimiento.tipo)
@@ -696,122 +791,131 @@ function EditSeguimientoModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-slate-200">Editar Seguimiento</h2>
-            <p className="text-sm text-slate-400">{seguimiento.tipo} — {formatDate(seguimiento.fecha)}</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
-            <X size={20} />
-          </button>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">{error}</div>
+      )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
-            {error}
+      {/* Info de relaciones (read-only) */}
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-3 space-y-2 text-sm">
+        {seguimiento.entidad_nombre && (
+          <div className="flex items-center gap-2">
+            <Building2 size={14} className="text-slate-500 shrink-0" />
+            <span className="text-slate-400">Entidad:</span>
+            <span className="text-slate-200">{seguimiento.entidad_nombre}</span>
           </div>
         )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Tipo */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">Tipo</label>
-            <div className="grid grid-cols-4 gap-2">
-              {([
-                { value: 'Llamada' as const, label: 'Llamada', icon: Phone },
-                { value: 'Correo' as const, label: 'Correo', icon: Mail },
-                { value: 'Reunion' as const, label: 'Reunión', icon: Calendar },
-                { value: 'Nota' as const, label: 'Nota', icon: MessageSquare },
-              ]).map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTipo(value)}
-                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
-                    tipo === value
-                      ? 'bg-teal-700 border-teal-500 text-teal-300'
-                      : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-slate-500'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="text-xs font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
+        {seguimiento.contacto_nombre && (
+          <div className="flex items-center gap-2">
+            <Phone size={14} className="text-slate-500 shrink-0" />
+            <span className="text-slate-400">Contacto:</span>
+            <span className="text-slate-200">{seguimiento.contacto_nombre}</span>
           </div>
-
-          {/* Notas */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">
-              Notas <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              required
-              rows={3}
-              placeholder="Detalle de la interacción..."
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500 resize-none text-sm"
-            />
+        )}
+        {seguimiento.oportunidad_codigo && (
+          <div className="flex items-center gap-2">
+            <Briefcase size={14} className="text-slate-500 shrink-0" />
+            <span className="text-slate-400">Oportunidad:</span>
+            <span className="text-slate-200">{seguimiento.oportunidad_codigo}</span>
           </div>
-
-          {/* Fecha + Hora */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Fecha</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={e => setFecha(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Hora</label>
-              <input
-                type="time"
-                value={hora}
-                onChange={e => setHora(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-              />
-            </div>
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-1.5">Estado</label>
-            <select
-              value={estado}
-              onChange={e => setEstado(e.target.value as SeguimientoEstado)}
-              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
-            >
-              <option value="Pendiente">Pendiente</option>
-              <option value="Completado">Completado</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors"
-            >
-              {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
-    </div>
+
+      {/* Tipo */}
+      <div>
+        <label className="block text-sm text-slate-400 mb-2">Tipo</label>
+        <div className="grid grid-cols-4 gap-2">
+          {([
+            { value: 'Llamada' as const, label: 'Llamada', icon: Phone },
+            { value: 'Correo' as const, label: 'Correo', icon: Mail },
+            { value: 'Reunion' as const, label: 'Reunión', icon: Calendar },
+            { value: 'Nota' as const, label: 'Nota', icon: MessageSquare },
+          ]).map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTipo(value)}
+              className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${
+                tipo === value
+                  ? 'bg-teal-700 border-teal-500 text-teal-300'
+                  : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-slate-500'
+              }`}
+            >
+              <Icon size={18} />
+              <span className="text-xs font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notas */}
+      <div>
+        <label className="block text-sm text-slate-400 mb-1.5">
+          Notas <span className="text-red-400">*</span>
+        </label>
+        <textarea
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          required
+          rows={4}
+          placeholder="Detalle de la interacción..."
+          className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500 resize-none text-sm"
+        />
+      </div>
+
+      {/* Fecha + Hora */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Fecha</label>
+          <input
+            type="date"
+            value={fecha}
+            onChange={e => setFecha(e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-400 mb-1.5">Hora</label>
+          <input
+            type="time"
+            value={hora}
+            onChange={e => setHora(e.target.value)}
+            className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+          />
+        </div>
+      </div>
+
+      {/* Estado */}
+      <div>
+        <label className="block text-sm text-slate-400 mb-1.5">Estado</label>
+        <select
+          value={estado}
+          onChange={e => setEstado(e.target.value as SeguimientoEstado)}
+          className="w-full px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+        >
+          <option value="Pendiente">Pendiente</option>
+          <option value="Completado">Completado</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="flex-1 py-3 bg-teal-600 hover:bg-teal-500 disabled:bg-teal-800 disabled:text-slate-500 text-white font-medium rounded-xl transition-colors"
+        >
+          {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+        </button>
+      </div>
+    </form>
   )
 }
