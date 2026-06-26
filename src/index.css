@@ -125,6 +125,17 @@ html {
   @apply bg-slate-400;
 }
 
+/* Kanban: hide the native horizontal scrollbar — the sticky shim below
+   the kanban shows the persistent scrollbar instead. */
+.kanban-scroll-container::-webkit-scrollbar {
+  height: 0 !important;
+  display: none;
+}
+.kanban-scroll-container {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 /* Slide-in animation for SlidePanel */
 @keyframes slide-in-right {
   from { transform: translateX(100%); }

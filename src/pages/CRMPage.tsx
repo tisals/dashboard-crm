@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, memo } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query'
 import { useSearchParams, useOutletContext } from 'react-router-dom'
 import {
@@ -759,6 +759,29 @@ export function CRMPage() {
   const [selectedOppIds, setSelectedOppIds] = useState<Set<number>>(new Set())
   const [showBulkMove, setShowBulkMove] = useState(false)
   const [bulkTargetEtapaId, setBulkTargetEtapaId] = useState<number | null>(null)
+  // Kanban sticky scrollbar: ref to the actual scroll container + a "shim" track
+  // that mirrors its scrollLeft. The shim is `sticky bottom-0` so the bar stays
+  // visible even when the user scrolls vertically through long kanban cards.
+  const kanbanScrollRef = useRef<HTMLDivElement | null>(null)
+  const kanbanShimRef = useRef<HTMLDivElement | null>(null)
+  const [kanbanMaxScroll, setKanbanMaxScroll] = useState(0)
+  const [kanbanScrollLeft, setKanbanScrollLeft] = useState(0)
+  useEffect(() => {
+    const el = kanbanScrollRef.current
+    if (!el) return
+    function recompute() {
+      if (!el) return
+      setKanbanMaxScroll(Math.max(0, el.scrollWidth - el.clientWidth))
+    }
+    recompute()
+    const ro = new ResizeObserver(recompute)
+    ro.observe(el)
+    window.addEventListener('resize', recompute)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', recompute)
+    }
+  }, [byEstado])
   const { user } = useAuth()
   const isAdmin = user?.rol_slug === 'admin' || user?.rol_slug === 'super_admin'
 
@@ -1453,9 +1476,17 @@ export function CRMPage() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
+          {/* Kanban scroll container. The native scrollbar is hidden — a
+              sticky bottom "shim" below provides a persistent scrollbar
+              that's always visible regardless of vertical scroll position. */}
           <div
-            className="flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-4 px-4 min-w-full"
-            style={{ scrollbarWidth: 'thin', scrollbarColor: '#475569 #1e293b' }}
+            ref={kanbanScrollRef}
+            onScroll={(e) => {
+              const sl = e.currentTarget.scrollLeft
+              setKanbanScrollLeft(sl)
+              if (kanbanShimRef.current) kanbanShimRef.current.scrollLeft = sl
+            }}
+            className="kanban-scroll-container flex gap-3 md:gap-4 overflow-x-auto -mx-4 px-4 pt-2 pb-1 min-w-full"
           >
             {columns.map(col => (
               <KanbanColumn
@@ -1472,6 +1503,41 @@ export function CRMPage() {
                 onAddSeguimiento={handleAddSeguimiento}
               />
             ))}
+          </div>
+
+          {/* Sticky bottom scrollbar shim. Always visible. Drag it to scroll
+              the kanban. The inner div's width matches the kanban content
+              width so the thumb position is accurate. */}
+          <div
+            className="sticky bottom-0 -mx-4 px-4 pt-1 pb-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+            style={{ pointerEvents: kanbanMaxScroll > 0 ? 'auto' : 'none' }}
+          >
+            <div
+              ref={kanbanShimRef}
+              onScroll={(e) => {
+                const sl = e.currentTarget.scrollLeft
+                if (kanbanScrollRef.current) kanbanScrollRef.current.scrollLeft = sl
+                setKanbanScrollLeft(sl)
+              }}
+              className="overflow-x-auto h-4 rounded bg-slate-800/60 border border-slate-700/60"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#64748b #1e293b' }}
+              aria-hidden="true"
+            >
+              <div
+                style={{
+                  width: `${kanbanMaxScroll + (kanbanScrollRef.current?.clientWidth ?? 0)}px`,
+                  height: '1px',
+                }}
+              />
+            </div>
+            {/* Position indicator: shows current scroll position */}
+            {kanbanMaxScroll > 0 && (
+              <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1 px-1">
+                <span>Inicio</span>
+                <span>{Math.round((kanbanScrollLeft / kanbanMaxScroll) * 100)}%</span>
+                <span>Fin</span>
+              </div>
+            )}
           </div>
           <DragOverlay>
             {activeOportunidad && (

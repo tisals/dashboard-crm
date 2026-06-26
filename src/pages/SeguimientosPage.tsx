@@ -143,11 +143,11 @@ export function SeguimientosPage() {
     Cancelado: filteredBySearch.filter(s => s.estado === 'Cancelado'),
   }
 
-  // Stats
+  // Stats (counts over the full list, not the search-filtered subset)
   const stats = {
-    pendientes: seguimientos.filter(s => s.estado === 'Pendiente').length,
-    completados: seguimientos.filter(s => s.estado === 'Completado').length,
-    total: seguimientos.length,
+    pendientes: allSeguimientos.filter(s => s.estado === 'Pendiente').length,
+    completados: allSeguimientos.filter(s => s.estado === 'Completado').length,
+    total: allSeguimientos.length,
   }
 
   // Mutations
