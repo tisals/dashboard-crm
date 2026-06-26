@@ -69,7 +69,10 @@ function estadoBadgeClass(estado: string): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-ES', {
+  // Backend may return ISO string ("2026-06-26T00:00:00.000000Z") or
+  // plain date ("2026-06-26"). Normalize before passing to Date.
+  const normalized = dateStr.slice(0, 10)
+  return new Date(normalized + 'T00:00:00').toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -770,7 +773,9 @@ function EditSeguimientoForm({
 }) {
   const [tipo, setTipo] = useState<SeguimientoTipo>(seguimiento.tipo)
   const [notas, setNotas] = useState(seguimiento.notas ?? '')
-  const [fecha, setFecha] = useState(seguimiento.fecha)
+  // Backend returns ISO string (e.g. "2026-06-26T00:00:00.000000Z");
+  // input[type=date] requires yyyy-MM-dd only.
+  const [fecha, setFecha] = useState(seguimiento.fecha.slice(0, 10))
   const [hora, setHora] = useState(seguimiento.hora ?? '')
   const [estado, setEstado] = useState<SeguimientoEstado>(seguimiento.estado)
   const [error, setError] = useState<string | null>(null)
