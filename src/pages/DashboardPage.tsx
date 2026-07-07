@@ -215,8 +215,8 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
                 <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={50} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={60} tickFormatter={v => `$${(v / 1000).toLocaleString('de-DE')}`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => name === 'Ventas' ? [currency(value as number), name] : [value, name]} labelFormatter={label => label} />
                 <Bar yAxisId="left" dataKey="clientes" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Clientes" />
                 <Line yAxisId="right" type="monotone" dataKey="ventas" stroke="#14b8a6" strokeWidth={2} dot={false} name="Ventas" />
               </ComposedChart>
@@ -233,8 +233,8 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="mes" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} />
                 <YAxis yAxisId="left" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={30} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={55} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: '#334155' }} width={65} tickFormatter={v => `$${(v / 1000).toLocaleString('de-DE')}`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => name === 'Monto' ? [currency(value as number), name] : [value, name]} labelFormatter={label => label} />
                 <Bar yAxisId="left" dataKey="prospectos" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Prospectos" />
                 <Line yAxisId="right" type="monotone" dataKey="monto" stroke="#f59e0b" strokeWidth={2} dot={false} name="Monto" />
               </ComposedChart>
