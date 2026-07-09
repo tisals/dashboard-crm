@@ -30,7 +30,7 @@ export interface FunnelItem {
 }
 
 export interface VentasData {
-  ventas_mes: number
+  ventas_nuevas_mes: number
   ventas_por_mes: Record<string, number>
   ltv: number
   funnel: FunnelItem[]
@@ -38,8 +38,8 @@ export interface VentasData {
 
 export interface ChartData {
   meses: string[]
-  entidades_convertidas: number[]
-  ventas: number[]
+  prospectos: number[]
+  montos: number[]
 }
 
 export interface ComercialVenta {

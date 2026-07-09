@@ -81,10 +81,10 @@ export function DashboardPage() {
 
   const oportunidadesPorMes = useMemo(() => {
     if (!data) return []
-    return data.chart.meses.map(mes => ({
+    return data.chart.meses.map((mes, i) => ({
       mes,
-      prospectos: data.prospectos.entidades_por_mes[mes] ?? 0,
-      monto: data.prospectos.oportunidades_monto_por_mes[mes] ?? 0,
+      prospectos: data.chart.prospectos[i] ?? 0,
+      monto: data.chart.montos[i] ?? 0,
     }))
   }, [data])
 
@@ -92,8 +92,8 @@ export function DashboardPage() {
     if (!data) return []
     return data.chart.meses.map((mes, i) => ({
       mes,
-      clientes: data.chart.entidades_convertidas[i],
-      ventas: data.chart.ventas[i],
+      clientes: data.chart.prospectos[i] ?? 0,
+      ventas: data.chart.montos[i] ?? 0,
     }))
   }, [data])
 
@@ -132,8 +132,8 @@ export function DashboardPage() {
       icon: TrendingUp,
     },
     {
-      label: 'Ventas Mes',
-      value: currency(ventas.ventas_mes),
+      label: 'Ventas Nuevas Mes',
+      value: currency(ventas.ventas_nuevas_mes),
       icon: DollarSign,
     },
     {
