@@ -19,6 +19,7 @@ import {
   Download,
   Building2,
   Briefcase,
+  CopyPlus,
 } from 'lucide-react'
 import {
   getSeguimientos,
@@ -107,8 +108,11 @@ export function SeguimientosPage() {
   }
 
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [cloneSeguimiento, setCloneSeguimiento] = useState<Seguimiento | null>(null)
   const [editingSeguimiento, setEditingSeguimiento] = useState<Seguimiento | null>(null)
   const [viewingSeguimiento, setViewingSeguimiento] = useState<Seguimiento | null>(null)
+  const [sortBy, setSortBy] = useState<'fecha' | 'entidad'>('fecha')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // Fetch seguimientos with filters
   const { data: seguimientosData, isLoading } = useQuery({
@@ -140,14 +144,27 @@ export function SeguimientosPage() {
       })
     : allSeguimientos
 
-  // Group by estado for the cards view (Pendiente → Agendado → Completado → Cancelado).
-  // "Agendado" = Pendiente with fecha > today.
+  // Sort
   const today = new Date().toISOString().slice(0, 10)
+  const sorted = [...filteredBySearch].sort((a, b) => {
+    if (sortBy === 'fecha') {
+      const cmp = a.fecha.localeCompare(b.fecha)
+      return sortOrder === 'desc' ? -cmp : cmp
+    }
+    // sortBy === 'entidad'
+    const na = a.entidad_nombre ?? ''
+    const nb = b.entidad_nombre ?? ''
+    const cmp = na.localeCompare(nb)
+    return sortOrder === 'desc' ? -cmp : cmp
+  })
+
+  // Group by estado for the cards view (Agendado → Pendiente → Completado → Cancelado).
+  // "Agendado" = Pendiente with fecha > today.
   const grouped = {
-    Agendado: filteredBySearch.filter(s => s.estado === 'Pendiente' && s.fecha > today),
-    Pendiente: filteredBySearch.filter(s => s.estado === 'Pendiente' && s.fecha <= today),
-    Completado: filteredBySearch.filter(s => s.estado === 'Completado'),
-    Cancelado: filteredBySearch.filter(s => s.estado === 'Cancelado'),
+    Agendado: sorted.filter(s => s.estado === 'Pendiente' && s.fecha > today),
+    Pendiente: sorted.filter(s => s.estado === 'Pendiente' && s.fecha <= today),
+    Completado: sorted.filter(s => s.estado === 'Completado'),
+    Cancelado: sorted.filter(s => s.estado === 'Cancelado'),
   }
 
   // Stats (counts over the full list, not the search-filtered subset)
@@ -263,7 +280,26 @@ export function SeguimientosPage() {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          {/* Sort controls */}
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as 'fecha' | 'entidad')}
+              className="flex-1 px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-teal-500"
+            >
+              <option value="fecha">Orden: Fecha</option>
+              <option value="entidad">Orden: Entidad</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
+              className="px-3 py-2.5 bg-slate-900 border border-slate-600 rounded-xl text-slate-400 hover:text-slate-200 text-sm"
+              title={sortOrder === 'desc' ? 'Descendente' : 'Ascendente'}
+            >
+              {sortOrder === 'desc' ? '↓' : '↑'}
+            </button>
+          </div>
+
           {/* Search — debounced 1s via useDebouncedValue; this input is local */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -377,6 +413,7 @@ export function SeguimientosPage() {
                         onEdit={() => setEditingSeguimiento(s)}
                         onDelete={() => handleEliminar(s.id)}
                         onView={() => setViewingSeguimiento(s)}
+                        onClone={() => { setCloneSeguimiento(s); setShowCreateModal(true) }}
                         isCompleting={updateMutation.isPending}
                         isDeleting={deleteMutation.isPending}
                       />
@@ -415,6 +452,13 @@ export function SeguimientosPage() {
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={() => { setViewingSeguimiento(null); setCloneSeguimiento(viewingSeguimiento); setShowCreateModal(true) }}
+                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+                  title="Clonar"
+                >
+                  <CopyPlus size={15} />
+                </button>
                 <button
                   onClick={() => { setViewingSeguimiento(null); setEditingSeguimiento(viewingSeguimiento) }}
                   className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-slate-200"
@@ -505,12 +549,13 @@ export function SeguimientosPage() {
         </SlidePanel>
       )}
 
-      {/* Create SlidePanel */}
+      {/* Create / Clone SlidePanel */}
       {showCreateModal && (
-        <SlidePanel open onClose={() => setShowCreateModal(false)} title="Nuevo Seguimiento">
+        <SlidePanel open onClose={() => { setShowCreateModal(false); setCloneSeguimiento(null) }} title={cloneSeguimiento ? 'Clonar Seguimiento' : 'Nuevo Seguimiento'}>
           <CreateSeguimientoForm
+            initial={cloneSeguimiento ?? undefined}
             onSubmit={(payload) => createMutation.mutate(payload)}
-            onClose={() => setShowCreateModal(false)}
+            onClose={() => { setShowCreateModal(false); setCloneSeguimiento(null) }}
             isSubmitting={createMutation.isPending}
           />
         </SlidePanel>
@@ -539,6 +584,7 @@ function SeguimientoRow({
   onEdit,
   onDelete,
   onView,
+  onClone,
   isCompleting,
   isDeleting,
 }: {
@@ -547,6 +593,7 @@ function SeguimientoRow({
   onEdit: () => void
   onDelete: () => void
   onView: () => void
+  onClone: () => void
   isCompleting: boolean
   isDeleting: boolean
 }) {
@@ -554,6 +601,7 @@ function SeguimientoRow({
     ...(seguimiento.estado === 'Pendiente'
       ? [{ icon: <Check size={14} />, label: 'Completar', onClick: onCompletar }]
       : []),
+    { icon: <CopyPlus size={14} />, label: 'Clonar', onClick: onClone },
     { icon: <Download size={14} />, label: 'Exportar .ics', onClick: () => window.open(downloadIcsUrl(seguimiento.id), '_blank') },
     { icon: <Pencil size={14} />, label: 'Editar', onClick: onEdit },
     { icon: <Trash2 size={14} />, label: 'Eliminar', onClick: onDelete, danger: true },
@@ -613,19 +661,21 @@ function CreateSeguimientoForm({
   onClose,
   onSubmit,
   isSubmitting,
+  initial,
 }: {
   onClose: () => void
   onSubmit: (payload: { tipo: string; notas?: string; fecha?: string; hora?: string; estado?: string; oportunidad_id?: number; contacto_id?: number; entidad_id?: number }) => void
   isSubmitting: boolean
+  initial?: Seguimiento
 }) {
-  const [tipo, setTipo] = useState<SeguimientoTipo>('Llamada')
-  const [notas, setNotas] = useState('')
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10))
-  const [hora, setHora] = useState('')
+  const [tipo, setTipo] = useState<SeguimientoTipo>((initial?.tipo as SeguimientoTipo) ?? 'Llamada')
+  const [notas, setNotas] = useState(initial?.notas ?? '')
+  const [fecha, setFecha] = useState(initial?.fecha ?? new Date().toISOString().slice(0, 10))
+  const [hora, setHora] = useState(initial?.hora ?? '')
   const [estado, setEstado] = useState<SeguimientoEstado>('Pendiente')
-  const [entidadId, setEntidadId] = useState<number | undefined>(undefined)
-  const [contactoId, setContactoId] = useState<number | undefined>(undefined)
-  const [oportunidadId, setOportunidadId] = useState<number | undefined>(undefined)
+  const [entidadId, setEntidadId] = useState<number | undefined>(initial?.entidad_id ?? undefined)
+  const [contactoId, setContactoId] = useState<number | undefined>(initial?.contacto_id ?? undefined)
+  const [oportunidadId, setOportunidadId] = useState<number | undefined>(initial?.oportunidad_id ?? undefined)
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {

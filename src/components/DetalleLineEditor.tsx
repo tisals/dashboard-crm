@@ -65,11 +65,8 @@ function LineRow({
     setSearch(prod.nombre)
     setShowDropdown(false)
     onUpdate('producto_id', prod.id)
-    onUpdate('concepto', prod.descripcion || prod.nombre)
-    // Auto-fill description from product description if available
-    if (!line.descripcion || line.descripcion === line.concepto) {
-      onUpdate('descripcion', prod.descripcion || prod.nombre)
-    }
+    onUpdate('concepto', prod.nombre)
+    onUpdate('descripcion', prod.descripcion || prod.nombre)
     onUpdate('vr_unitario', prod.precio ?? 0)
     onUpdate('iva', prod.iva ?? 0)
   }
@@ -127,7 +124,7 @@ function LineRow({
 
       {/* Description (editable) */}
       <div>
-        <label className="block text-[10px] text-slate-500 mb-0.5">Descripción / Concepto</label>
+        <label className="block text-[10px] text-slate-500 mb-0.5">Descripción</label>
         <textarea
           value={line.descripcion}
           onChange={e => onUpdate('descripcion', e.target.value)}

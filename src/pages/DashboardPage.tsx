@@ -80,20 +80,20 @@ export function DashboardPage() {
   })
 
   const oportunidadesPorMes = useMemo(() => {
-    if (!data) return []
-    return data.chart.meses.map((mes, i) => ({
+    if (!data?.prospectos) return []
+    return data.chart.meses.map(mes => ({
       mes,
-      prospectos: data.chart.prospectos[i] ?? 0,
-      monto: data.chart.montos[i] ?? 0,
+      prospectos: data.prospectos.entidades_por_mes?.[mes] ?? 0,
+      monto: data.prospectos.oportunidades_monto_por_mes?.[mes] ?? 0,
     }))
   }, [data])
 
   const chartCombo = useMemo(() => {
-    if (!data) return []
+    if (!data?.chart?.meses) return []
     return data.chart.meses.map((mes, i) => ({
       mes,
-      clientes: data.chart.prospectos[i] ?? 0,
-      ventas: data.chart.montos[i] ?? 0,
+      clientes: data.chart.entidades_convertidas?.[i] ?? 0,
+      ventas: data.chart.ventas?.[i] ?? 0,
     }))
   }, [data])
 
