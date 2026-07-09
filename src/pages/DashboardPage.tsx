@@ -96,8 +96,8 @@ export function DashboardPage() {
       mes,
       // Clientes nuevos = entidades con oportunidades ACEPTADAS (convertidas)
       clientes: data.prospectos?.entidades_convertidas_mes?.[mes] ?? 0,
-      // Ventas = suma vr_total de detalle (mismo que chart.montos)
-      ventas: data.prospectos?.oportunidades_monto_por_mes?.[mes] ?? 0,
+      // Ventas = monto SOLO de oportunidades ACEPTADAS (no todas)
+      ventas: data.prospectos?.ventas_monto_por_mes?.[mes] ?? 0,
     }))
   }, [data])
 
