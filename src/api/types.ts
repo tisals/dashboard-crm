@@ -38,8 +38,12 @@ export interface VentasData {
 
 export interface ChartData {
   meses: string[]
+  // new keys
   prospectos: number[]
   montos: number[]
+  // legacy aliases (same data, backward compat)
+  entidades_convertidas?: number[]
+  ventas?: number[]
 }
 
 export interface ComercialVenta {

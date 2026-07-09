@@ -80,20 +80,24 @@ export function DashboardPage() {
   })
 
   const oportunidadesPorMes = useMemo(() => {
-    if (!data?.prospectos) return []
-    return data.chart.meses.map(mes => ({
+    if (!data?.chart?.meses) return []
+    return data.chart.meses.map((mes, i) => ({
       mes,
-      prospectos: data.prospectos.entidades_por_mes?.[mes] ?? 0,
-      monto: data.prospectos.oportunidades_monto_por_mes?.[mes] ?? 0,
+      // Prospectos = entidades DISTINTAS con cualquier oportunidad en el mes
+      prospectos: data.chart.entidades_convertidas?.[i] ?? 0,
+      // Monto = suma vr_total de detalle de oportunidades del mes
+      monto: data.chart.ventas?.[i] ?? 0,
     }))
   }, [data])
 
   const chartCombo = useMemo(() => {
     if (!data?.chart?.meses) return []
-    return data.chart.meses.map((mes, i) => ({
+    return data.chart.meses.map(mes => ({
       mes,
-      clientes: data.chart.entidades_convertidas?.[i] ?? 0,
-      ventas: data.chart.ventas?.[i] ?? 0,
+      // Clientes nuevos = entidades con oportunidades ACEPTADAS (convertidas)
+      clientes: data.prospectos?.entidades_convertidas_mes?.[mes] ?? 0,
+      // Ventas = suma vr_total de detalle (mismo que chart.montos)
+      ventas: data.prospectos?.oportunidades_monto_por_mes?.[mes] ?? 0,
     }))
   }, [data])
 
