@@ -80,7 +80,7 @@ export function SeguimientoCalendarioPage() {
     queryFn: () => getUsuarios({ per_page: 100 }),
     enabled: isAdmin,
   })
-  const availableUsers: { id: number; nombre: string }[] = (usuariosRes?.data as any[])?.map((u: any) => ({ id: u.id, nombre: u.nombre })) ?? []
+  const availableUsers: { id: number; nombre: string }[] = ((usuariosRes?.data as any)?.data as any[])?.map((u: any) => ({ id: u.id, nombre: u.nombre })) ?? [] 
 
   const [filterUserId, setFilterUserId] = useState<number | null>(null)
 
