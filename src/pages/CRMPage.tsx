@@ -1016,23 +1016,31 @@ export function CRMPage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
       queryClient.invalidateQueries({ queryKey: ['pipelines'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 
   const clonar = useMutation({
     mutationFn: (id: number) => clonarOportunidad(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['oportunidades'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 
   const ganar = useMutation({
     mutationFn: (id: number) => ganarOportunidad(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['oportunidades'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 
   const deleteOportunidadMut = useMutation({
     mutationFn: deleteOportunidad,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       setSelectedOportunidadId(null)
     },
   })
@@ -1041,6 +1049,7 @@ export function CRMPage() {
     mutationFn: (id: number) => versionarOportunidad(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       if (res?.data?.id) {
         setSelectedOportunidadId(res.data.id)
       }
@@ -1068,6 +1077,7 @@ export function CRMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
       queryClient.invalidateQueries({ queryKey: ['oportunidad', selectedOportunidadId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 
@@ -1076,6 +1086,7 @@ export function CRMPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
       queryClient.invalidateQueries({ queryKey: ['oportunidad', selectedOportunidadId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 
@@ -1083,6 +1094,7 @@ export function CRMPage() {
     mutationFn: bulkMoveOportunidades,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       setSelectedOppIds(new Set())
       setShowBulkMove(false)
       setBulkTargetEtapaId(null)
@@ -1186,6 +1198,7 @@ export function CRMPage() {
       setLineasSuccess(true)
       queryClient.invalidateQueries({ queryKey: ['detalles', selectedOportunidadId] })
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       setTimeout(() => setLineasSuccess(false), 3000)
     } catch (err: unknown) {
       const msg = err instanceof Error && 'response' in err
@@ -1694,7 +1707,10 @@ export function CRMPage() {
       {showCreateModal && (
         <NuevaOportunidadModal
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => queryClient.invalidateQueries({ queryKey: ['oportunidades'] })}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+          }}
         />
       )}
 
@@ -2127,6 +2143,7 @@ export function CRMPage() {
             queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
             queryClient.invalidateQueries({ queryKey: ['oportunidad', selectedOportunidadId] })
             queryClient.invalidateQueries({ queryKey: ['seguimientos'], exact: false })
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] })
           }}
         />
       )}
