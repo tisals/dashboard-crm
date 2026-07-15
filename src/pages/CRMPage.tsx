@@ -779,6 +779,14 @@ export function CRMPage() {
     pipeline_id: selectedPipelineId,
   })
 
+  // Initialize filters from URL params (e.g. when navigated from DirectorioPage)
+  useEffect(() => {
+    const entidadId = searchParams.get('entidad_id')
+    if (entidadId) {
+      setFilters(prev => prev.entidad_id === entidadId ? prev : { ...prev, entidad_id: entidadId })
+    }
+  }, [searchParams])
+
   // Input value is local + immediate; filters.search is debounced so the
   // query only refires after the user stops typing.
   const [searchInput, setSearchInput] = useState('')

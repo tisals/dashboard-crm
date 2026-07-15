@@ -507,7 +507,7 @@ export function DirectorioPage() {
                 oportunidades.map((op) => (
                   <div
                     key={op.id}
-                    onClick={() => navigate(`/crm?oportunidad_id=${op.id}`)}
+                    onClick={() => navigate(`/crm?entidad_id=${op.entidad_id}`)}
                     className="bg-slate-800 rounded-lg border border-slate-700 p-3 cursor-pointer hover:border-teal-500/50 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-1">
