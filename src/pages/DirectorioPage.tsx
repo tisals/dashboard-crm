@@ -30,7 +30,8 @@ import { EntidadFormModal } from '../components/EntidadFormModal';
 import { CommonCard } from '../components/CommonCard';
 import { SeguimientoModal } from '../components/SeguimientoModal';
 import { SlidePanel } from '../components/SlidePanel';
-import type { Contacto, Entidad } from '../api/types';
+import { ReasignarOportunidadModal } from '../components/ReasignarOportunidadModal';
+import type { Contacto, Entidad, Oportunidad } from '../api/types';
 
 const PER_PAGE = 50;
 
@@ -50,6 +51,7 @@ export function DirectorioPage() {
   const [editContacto, setEditContacto] = useState<Contacto | null>(null);
   const [seguimientoEntidad, setSeguimientoEntidad] = useState<Entidad | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [oppToReasign, setOppToReasign] = useState<Oportunidad | null>(null);
   const queryClient = useQueryClient();
 
   /* ----------   AUTH   ---------- */
@@ -480,7 +482,21 @@ export function DirectorioPage() {
                               deleteContacto(c.id).then(() => {
                                 queryClient.invalidateQueries({
                                   queryKey: ['contactos'],
-                                });
+  });
+
+  const reasignarOportunidad = useMutation({
+    mutationFn: ({ id, entidad_id }: { id: number; entidad_id: number }) =>
+      updateOportunidad(id, { entidad_id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['entidades'] });
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] });
+      if (selectedEntityId) {
+        queryClient.invalidateQueries({ queryKey: ['oportunidades', 'byEntidad', selectedEntityId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
                               });
                             }
                           }
@@ -494,10 +510,12 @@ export function DirectorioPage() {
 
           {/* Opportunities */}
           <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              Oportunidades ({oportunidades.length})
-            </h3>
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Oportunidades ({oportunidades.length})
+              </h3>
+            </div>
             <div className="space-y-2">
               {oportunidades.length === 0 ? (
                 <p className="text-slate-500 text-sm text-center py-4">
@@ -507,38 +525,56 @@ export function DirectorioPage() {
                 oportunidades.map((op) => (
                   <div
                     key={op.id}
-                    onClick={() => navigate(`/crm?entidad_id=${op.entidad_id}`)}
-                    className="bg-slate-800 rounded-lg border border-slate-700 p-3 cursor-pointer hover:border-teal-500/50 transition-colors"
+                    className="bg-slate-800 rounded-lg border border-slate-700 p-3 hover:border-teal-500/50 transition-colors"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-200">
-                        {op.codigo}
-                      </span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                        op.estado === 'Ganada'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : op.estado === 'Aceptada'
-                          ? 'bg-purple-500/20 text-purple-400'
-                          : op.estado === 'Enviada'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : op.estado === 'Borrador'
-                          ? 'bg-slate-600 text-slate-300'
-                          : op.estado === 'Perdida' || op.estado === 'Rechazada'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-slate-600 text-slate-300'
-                      }`}>
-                        {op.estado}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">
-                        {new Date(op.fecha).toLocaleDateString('es-ES')}
-                      </span>
-                      {op.valor != null && (
-                        <span className="text-xs font-medium text-slate-300">
-                          ${op.valor.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    <div
+                      onClick={() => navigate(`/crm?entidad_id=${op.entidad_id}`)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-slate-200">
+                          {op.codigo}
                         </span>
-                      )}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                          op.estado === 'Ganada'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : op.estado === 'Aceptada'
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : op.estado === 'Enviada'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : op.estado === 'Borrador'
+                            ? 'bg-slate-600 text-slate-300'
+                            : op.estado === 'Perdida' || op.estado === 'Rechazada'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-slate-600 text-slate-300'
+                        }`}>
+                          {op.estado}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">
+                          {new Date(op.fecha).toLocaleDateString('es-ES')}
+                        </span>
+                        {op.valor != null && (
+                          <span className="text-xs font-medium text-slate-300">
+                            ${op.valor.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-slate-700 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOppToReasign(op)
+                        }}
+                        className="text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-teal-400 transition-colors flex items-center gap-1"
+                        title="Modificar oportunidad (reasignar o reemplazar)"
+                      >
+                        <Pencil size={12} />
+                        Modificar
+                      </button>
                     </div>
                   </div>
                 ))
@@ -647,6 +683,14 @@ export function DirectorioPage() {
             queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
             queryClient.invalidateQueries({ queryKey: ['contactos'] });
           }}
+        />
+      )}
+      {oppToReasign && (
+        <ReasignarOportunidadModal
+          oportunidadActual={oppToReasign}
+          entidadActualNombre={selectedEntity?.nombre ?? `#${oppToReasign.entidad_id}`}
+          onClose={() => setOppToReasign(null)}
+          onSuccess={() => setOppToReasign(null)}
         />
       )}
     </div>

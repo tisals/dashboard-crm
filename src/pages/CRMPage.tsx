@@ -53,6 +53,7 @@ import { ActionButtons } from '../components/ActionButtons'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 import { SlidePanel } from '../components/SlidePanel'
 import { SendQuoteModal } from '../components/SendQuoteModal'
+import { EntidadSearchSelect } from '../components/EntidadSearchSelect'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 // ── Display mapping: maestros name → internal estado string ──
@@ -1089,6 +1090,23 @@ export function CRMPage() {
     },
   })
 
+  // Reasignar la entidad de la oportunidad (botón "Cambiar entidad" del sidebar)
+  const cambiarEntidad = useMutation({
+    mutationFn: ({ id, entidad_id }: { id: number; entidad_id: number }) =>
+      updateOportunidad(id, { entidad_id }),
+    onSuccess: (res) => {
+      // Actualizar el cache de la opp abierta para reflejar el nuevo nombre
+      if (res?.data) {
+        queryClient.setQueryData(['oportunidad', selectedOportunidadId], (old: any) => {
+          if (!old?.success) return old
+          return { ...old, data: { ...old.data, ...res.data } }
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
   const aprobar = useMutation({
     mutationFn: (id: number) => aprobarCotizacion(id),
     onSuccess: () => {
@@ -1778,6 +1796,25 @@ export function CRMPage() {
                 {selectedOpp.entidad_identificacion && (
                   <p className="text-slate-400 text-sm mt-1">{selectedOpp.entidad_identificacion}</p>
                 )}
+                <div className="mt-3 pt-3 border-t border-slate-700">
+                  <EntidadSearchSelect
+                    value={selectedOpp.entidad_id ?? null}
+                    onChange={(newId) => {
+                      if (!newId || newId === selectedOpp.entidad_id) return
+                      cambiarEntidad.mutate({ id: selectedOpp.id, entidad_id: newId })
+                    }}
+                    placeholder="Cambiar entidad..."
+                    size="sm"
+                    label="Reasignar a otra entidad"
+                    clearable={false}
+                  />
+                  {cambiarEntidad.isPending && (
+                    <p className="text-xs text-slate-500 mt-1">Guardando...</p>
+                  )}
+                  {cambiarEntidad.isError && (
+                    <p className="text-xs text-red-400 mt-1">Error al cambiar entidad</p>
+                  )}
+                </div>
               </div>
 
               {/* Comercial(es) Asignado(s) */}

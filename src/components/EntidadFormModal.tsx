@@ -83,7 +83,7 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     queryKey: ['maestros', 'etapa_contacto'],
     queryFn: () => getMaestros({ campo: 'Etapa_contacto', per_page: 100 }),
   })
-  const etapasContacto: Maestro[] = (etapasData as any)?.data ?? []
+  const etapasContacto: Maestro[] = (etapasData as any)?.data?.data ?? []
   const estadoOptions = etapasContacto.filter(e => e.habilitado !== '0')
 
   // Get currently assigned user for this entity if editing
