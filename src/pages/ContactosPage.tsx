@@ -8,6 +8,7 @@ import { Contacto, Entidad } from '../api/types'
 import { SeguimientoModal } from '../components/SeguimientoModal'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 import { CommonCard } from '../components/CommonCard'
+import { EntidadSearchSelect } from '../components/EntidadSearchSelect'
 
 export function ContactosPage() {
   const { user } = useAuth()
@@ -229,7 +230,7 @@ export function ContactosPage() {
       {/* Form Panel */}
       <ContactoFormPanel
         open={formOpen} onClose={() => setFormOpen(false)}
-        contacto={selectedContacto} entidades={entidades}
+        contacto={selectedContacto}
         onSubmit={(data) => {
           if (selectedContacto && editMode) updateMut.mutate({ id: selectedContacto.id, data })
           else createMut.mutate(data)
@@ -269,8 +270,8 @@ export function ContactosPage() {
 }
 // ── Form Panel ───────────────────────────────────────────────────
 
-function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, onReasignar, isLoading }: {
-  open: boolean; onClose: () => void; contacto: Contacto | null; entidades: Entidad[];
+function ContactoFormPanel({ open, onClose, contacto, onSubmit, onReasignar, isLoading }: {
+  open: boolean; onClose: () => void; contacto: Contacto | null;
   onSubmit: (data: any) => void; onReasignar: (contactoId: number, entidadId: number, merge: boolean) => Promise<void>;
   isLoading: boolean
 }) {
@@ -365,15 +366,15 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, onRea
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Apellidos *</label>
-              <input required value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })}
+              <label className="block text-xs text-slate-400 mb-1">Apellidos</label>
+              <input value={form.apellidos} onChange={e => setForm({ ...form, apellidos: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Email *</label>
-            <input required type="email" value={form.email_contacto} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
+            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <input type="email" value={form.email_contacto} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
               className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500" />
           </div>
 
@@ -405,16 +406,11 @@ function ContactoFormPanel({ open, onClose, contacto, entidades, onSubmit, onRea
 
           <div>
             <label className="block text-xs text-slate-400 mb-1">Entidad</label>
-            <select value={form.entidad_id} onChange={e => setForm({ ...form, entidad_id: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-teal-500">
-              <option value="">Sin entidad</option>
-              {contacto && contacto.entidad_id && !entidades.some(ent => ent.id === contacto.entidad_id) && (
-                <option value={contacto.entidad_id.toString()}>
-                  {contacto.entidad_nombre ?? `Entidad #${contacto.entidad_id}`}
-                </option>
-              )}
-              {entidades.map(ent => (<option key={ent.id} value={ent.id.toString()}>{ent.nombre}</option>))}
-            </select>
+            <EntidadSearchSelect
+              value={form.entidad_id ? Number(form.entidad_id) : null}
+              onChange={(id) => setForm({ ...form, entidad_id: id?.toString() ?? '' })}
+              placeholder="Buscar entidad..."
+            />
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-slate-700">
