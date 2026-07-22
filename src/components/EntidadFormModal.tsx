@@ -41,7 +41,7 @@ type FormState = {
   usuario_id: string
 }
 
-type FormErrors = Partial<Record<keyof FormState, string>>
+type FormErrors = Partial<Record<keyof FormState | '_global' | '_assignment', string>>
 
 export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay' }: EntidadFormModalProps) {
   const isEdit = !!entidad
@@ -237,6 +237,16 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   return (
     <SlidePanel open onClose={onClose} title={isEdit ? 'Editar Entidad' : 'Nueva Entidad'} mode={mode}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {errors._global && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">
+            {errors._global}
+          </div>
+        )}
+        {errors._assignment && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-300 text-sm">
+            {errors._assignment}
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">Tipo de persona *</label>
