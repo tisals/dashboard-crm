@@ -1048,9 +1048,10 @@ export function CRMPage() {
   const deleteOportunidadMut = useMutation({
     mutationFn: deleteOportunidad,
     onSuccess: () => {
+      // Close sidebar FIRST so the individual query ['oportunidades', id] is disabled
+      setSelectedOportunidadId(null)
       queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      setSelectedOportunidadId(null)
     },
   })
 
@@ -1278,8 +1279,9 @@ export function CRMPage() {
     enabled: !!selectedOportunidadId,
   })
 
-  // Historial de versiones: base codigo (sin sufijo -V{N}) + todas las versiones
-  const baseCodigo = selectedOpp?.codigo?.replace(/-V\d+$/i, '') ?? ''
+  // Historial de versiones: base codigo (sin sufijo " vN" / "-VN") + todas las versiones
+  // The convention on this project is the CSV/legacy one: lowercase "v" with a space.
+  const baseCodigo = selectedOpp?.codigo?.replace(/[\s\-]+[vV]\d+$/, '') ?? ''
   const { data: historyData } = useQuery({
     queryKey: ['oportunidades', 'history', baseCodigo],
     queryFn: () => getOportunidades({
