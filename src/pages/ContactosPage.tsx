@@ -155,9 +155,9 @@ export function ContactosPage() {
             <CommonCard
               key={c.id}
               onClick={() => handleView(c)}
-              title={`${c.nombres} ${c.apellidos}`}
+              title={`${c.nombres} ${c.apellidos ?? ''}`.trim()}
               subtitle={c.cargo ? `${c.cargo}${c.area ? ` · ${c.area}` : ''}` : undefined}
-              avatarText={`${c.nombres.charAt(0)}${c.apellidos.charAt(0)}`}
+              avatarText={`${(c.nombres ?? '').charAt(0)}${(c.apellidos ?? '').charAt(0)}`.toUpperCase() || '?'}
               avatarColor="bg-teal-700/50 text-teal-400"
               info1={c.email_contacto ? { icon: <Mail size={12} />, text: c.email_contacto } : undefined}
               info2={c.movil ? { icon: <Phone size={12} />, text: c.movil } : undefined}
@@ -481,10 +481,10 @@ function ContactoDetailPanel({ open, onClose, contacto, entidades, onEdit, onSeg
         {/* Avatar + Name */}
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full bg-teal-700/50 flex items-center justify-center text-teal-400 font-bold text-xl">
-            {contacto.nombres.charAt(0)}{contacto.apellidos.charAt(0)}
+            {`${(contacto.nombres ?? '').charAt(0)}${(contacto.apellidos ?? '').charAt(0)}`.toUpperCase() || '?'}
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">{contacto.nombres} {contacto.apellidos}</h2>
+            <h2 className="text-lg font-semibold text-slate-100">{contacto.nombres}{contacto.apellidos ? ` ${contacto.apellidos}` : ''}</h2>
             {contacto.cargo && <p className="text-sm text-slate-400">{contacto.cargo}{contacto.area ? ` · ${contacto.area}` : ''}</p>}
           </div>
         </div>

@@ -16,7 +16,7 @@ export function ContactCard({ contacto, oportunidadId, entidadId, onLogged, onEd
   const [showModal, setShowModal] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const nombreCompleto = `${contacto.nombres} ${contacto.apellidos}`.trim()
+  const nombreCompleto = `${contacto.nombres} ${contacto.apellidos ?? ''}`.trim()
 
   function handleEdit() {
     setMenuOpen(false)
@@ -35,7 +35,7 @@ export function ContactCard({ contacto, oportunidadId, entidadId, onLogged, onEd
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-teal-800 flex items-center justify-center text-teal-400 font-medium text-sm flex-shrink-0">
-              {nombreCompleto.charAt(0).toUpperCase()}
+              {(nombreCompleto || '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="font-medium text-slate-200 text-sm truncate">{nombreCompleto}</p>
