@@ -567,7 +567,12 @@ export async function assignEntidadUsuario(payload: { usuario_id: number; entida
 }
 
 export async function removeEntidadUsuario(payload: { usuario_id: number; entidad_id: number }) {
-  const { data } = await crmApi.delete<ApiResponse<any>>('/entidad-usuario', { data: payload })
+  // Use query params for DELETE (not all servers parse DELETE body)
+  const params = new URLSearchParams({
+    usuario_id: String(payload.usuario_id),
+    entidad_id: String(payload.entidad_id),
+  })
+  const { data } = await crmApi.delete<ApiResponse<any>>(`/entidad-usuario?${params.toString()}`)
   return data
 }
 

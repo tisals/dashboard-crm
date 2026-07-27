@@ -147,8 +147,8 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
       setForm({
         tipo_persona: entidad.tipo_persona === 'Juridica' ? 'Juridica' : 'Natural',
         tipo_id: entidad.tipo_id ?? '',
-        identificacion: entidad.identificacion,
-        nombre: entidad.nombre,
+        identificacion: entidad.identificacion ?? '',
+        nombre: entidad.nombre ?? '',
         nombre_comercial: entidad.nombre_comercial ?? '',
         direccion: entidad.direccion ?? '',
         ciudad_cod: entidad.ciudad_cod ?? '',
@@ -159,7 +159,7 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
         cantidad_empleados: entidad.cantidad_empleados?.toString() ?? '',
         rut: entidad.rut ?? '',
         logo: entidad.logo ?? '',
-        estado: entidad.estado,
+        estado: entidad.estado ?? 'Prospecto',
         usuario_ids: [],
         nuevo_comercial_id: '',
       })
@@ -215,23 +215,37 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
       const toRemove = oldIds.filter((id) => !newIds.includes(id))
 
       const errors: string[] = []
+      // Helper: ignora errores idempotentes (404=no existe, 409=ya existe)
+      // porque después de un save previo, el estado puede ya estar como queremos
+      const isIdempotentError = (e: any) => {
+        const status = e?.response?.status
+        return status === 404 || status === 409
+      }
+      const describeErr = (e: any, prefix: string) => {
+        const status = e?.response?.status
+        const msg = (e?.response?.data?.message ?? e?.response?.data?.error ?? e?.message ?? '').toString()
+        return status ? `${prefix} (HTTP ${status}): ${msg}` : `${prefix}: ${msg}`
+      }
+
       for (const uid of toRemove) {
         try {
           await removeEntidadUsuario({ usuario_id: uid, entidad_id: savedEntity.id })
-        } catch (e) {
-          errors.push(`Error al quitar comercial ${uid}`)
+        } catch (e: any) {
+          if (isIdempotentError(e)) continue // ya estaba borrado, ok
+          errors.push(describeErr(e, `Quitar comercial ${uid}`))
         }
       }
       for (const uid of toAdd) {
         try {
           await assignEntidadUsuario({ usuario_id: uid, entidad_id: savedEntity.id })
-        } catch (e) {
-          errors.push(`Error al asignar comercial ${uid}`)
+        } catch (e: any) {
+          if (isIdempotentError(e)) continue // ya estaba asignado, ok
+          errors.push(describeErr(e, `Asignar comercial ${uid}`))
         }
       }
 
       if (errors.length) {
-        setErrors({ _assignment: errors.join('. ') })
+        setErrors({ _assignment: errors.join(' | ') })
         setLoading(false)
         return
       }
@@ -290,7 +304,7 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
             </select>
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Identificación *</label>
+            <label className="block text-sm text-slate-400 mb-1">Identificación</label>
             <input type="text" value={form.identificacion} onChange={(e) => setForm({...form, identificacion: e.target.value})}
               className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500" />
             {errors.identificacion && <p className="text-red-400 text-xs mt-1">{errors.identificacion}</p>}
