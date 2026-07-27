@@ -38,7 +38,10 @@ type FormState = {
   rut: string
   logo: string
   estado: string
-  usuario_id: string
+  /** IDs de los comerciales asignados a esta entidad (PK compuesta en entidad_usuario). */
+  usuario_ids: number[]
+  /** ID seleccionado en el dropdown para agregar (transitorio, no persistido). */
+  nuevo_comercial_id: string
 }
 
 type FormErrors = Partial<Record<keyof FormState | '_global' | '_assignment', string>>
@@ -61,7 +64,8 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     rut: '',
     logo: '',
     estado: 'Prospecto',
-    usuario_id: '',
+    usuario_ids: [],
+    nuevo_comercial_id: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const [loading, setLoading] = useState(false)
@@ -93,12 +97,13 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     enabled: !!entidad?.id,
   })
   const assignedUsers = assignedUsersRes?.data ?? []
-  const initialAssignedUserId = assignedUsers[0]?.id
+  const initialAssignedUserIds = (assignedUsers ?? []).map((u: any) => u.id)
 
   useEffect(() => {
-    if (assignedUsers.length > 0) {
-      setForm(prev => ({ ...prev, usuario_id: assignedUsers[0].id.toString() }))
-    }
+    setForm(prev => ({
+      ...prev,
+      usuario_ids: assignedUsers.map((u: any) => u.id),
+    }))
   }, [assignedUsers])
 
   // Buscar ciudades con el texto ingresado
@@ -155,14 +160,15 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
         rut: entidad.rut ?? '',
         logo: entidad.logo ?? '',
         estado: entidad.estado,
-        usuario_id: '',
+        usuario_ids: [],
+        nuevo_comercial_id: '',
       })
     }
   }, [entidad])
 
   function validate(): boolean {
     const errs: FormErrors = {}
-    if (!form.identificacion?.trim()) errs.identificacion = 'La identificación es obligatoria'
+    // NIT/identificación NO es obligatorio (es opcional para prospectos sin formalizar)
     if (!form.nombre?.trim()) errs.nombre = 'El nombre es obligatorio'
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Email inválido'
@@ -202,17 +208,32 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
         savedEntity = res.data!
       }
 
-      // Sync assigned user
-      const newUserId = form.usuario_id ? Number(form.usuario_id) : null
-      const oldUserId = initialAssignedUserId ?? null
+      // Sync comerciales asignados (lista de IDs)
+      const newIds = form.usuario_ids
+      const oldIds = initialAssignedUserIds
+      const toAdd = newIds.filter((id) => !oldIds.includes(id))
+      const toRemove = oldIds.filter((id) => !newIds.includes(id))
 
-      if (newUserId !== oldUserId) {
-        if (oldUserId) {
-          await removeEntidadUsuario({ usuario_id: oldUserId, entidad_id: savedEntity.id })
+      const errors: string[] = []
+      for (const uid of toRemove) {
+        try {
+          await removeEntidadUsuario({ usuario_id: uid, entidad_id: savedEntity.id })
+        } catch (e) {
+          errors.push(`Error al quitar comercial ${uid}`)
         }
-        if (newUserId) {
-          await assignEntidadUsuario({ usuario_id: newUserId, entidad_id: savedEntity.id })
+      }
+      for (const uid of toAdd) {
+        try {
+          await assignEntidadUsuario({ usuario_id: uid, entidad_id: savedEntity.id })
+        } catch (e) {
+          errors.push(`Error al asignar comercial ${uid}`)
         }
+      }
+
+      if (errors.length) {
+        setErrors({ _assignment: errors.join('. ') })
+        setLoading(false)
+        return
       }
 
       onSuccess()
@@ -390,16 +411,74 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
           </div>
         </div>
 
-        {/* Comercial Asignado */}
+        {/* Comerciales Asignados (múltiples via entidad_usuario) */}
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Comercial Asignado</label>
-          <select value={form.usuario_id} onChange={(e) => setForm({...form, usuario_id: e.target.value})}
-            className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500">
-            <option value="">Sin comercial asignado</option>
-            {comerciales.map(u => (
-              <option key={u.id} value={u.id}>{u.nombre} ({u.rol_nombre ?? 'Comercial'})</option>
-            ))}
-          </select>
+          <label className="block text-sm text-slate-400 mb-1">
+            Comerciales Asignados
+            <span className="ml-2 text-xs text-slate-500">(podés asignar varios)</span>
+          </label>
+
+          {/* Chips de comerciales ya asignados */}
+          <div className="flex flex-wrap gap-2 mb-2 min-h-[2rem] p-2 bg-slate-900 border border-slate-700 rounded-xl">
+            {form.usuario_ids.length === 0 && (
+              <span className="text-xs text-slate-500 italic">Sin comerciales asignados</span>
+            )}
+            {form.usuario_ids.map(uid => {
+              const u = comerciales.find(c => c.id === uid)
+              if (!u) {
+                return (
+                  <span key={uid} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700 text-xs text-slate-300">
+                    #{uid}
+                    <button type="button" onClick={() => setForm({ ...form, usuario_ids: form.usuario_ids.filter(x => x !== uid) })}
+                      className="ml-1 text-slate-400 hover:text-red-400">×</button>
+                  </span>
+                )
+              }
+              return (
+                <span key={uid} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-700/30 border border-teal-700 text-xs text-teal-200">
+                  {u.nombre}
+                  <button type="button" onClick={() => setForm({ ...form, usuario_ids: form.usuario_ids.filter(x => x !== uid) })}
+                    className="ml-1 text-teal-300 hover:text-red-400 transition-colors" title="Quitar">×</button>
+                </span>
+              )
+            })}
+          </div>
+
+          {/* Dropdown para agregar */}
+          <div className="flex gap-2">
+            <select
+              value={form.nuevo_comercial_id}
+              onChange={(e) => setForm({ ...form, nuevo_comercial_id: e.target.value })}
+              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-slate-200 focus:outline-none focus:border-teal-500"
+              disabled={comerciales.length === 0}
+            >
+              <option value="">
+                {comerciales.length === 0 ? 'No hay comerciales disponibles' : 'Seleccionar comercial...'}
+              </option>
+              {comerciales
+                .filter(u => !form.usuario_ids.includes(u.id))
+                .map(u => (
+                  <option key={u.id} value={u.id}>{u.nombre} ({u.rol_nombre ?? 'Comercial'})</option>
+                ))
+              }
+            </select>
+            <button
+              type="button"
+              disabled={!form.nuevo_comercial_id}
+              onClick={() => {
+                const id = Number(form.nuevo_comercial_id)
+                if (!id || form.usuario_ids.includes(id)) return
+                setForm({ ...form, usuario_ids: [...form.usuario_ids, id], nuevo_comercial_id: '' })
+              }}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors"
+            >
+              Agregar
+            </button>
+          </div>
+
+          {errors._assignment && (
+            <p className="text-red-400 text-xs mt-1">{errors._assignment}</p>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
