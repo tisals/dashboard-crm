@@ -452,8 +452,17 @@ export function DirectorioPage() {
                 Contactos ({contactos.length})
               </h3>
               <button
-                onClick={() => setShowContactoForm(true)}
+                onClick={() => {
+                  // Si el modal de edición de entidad está abierto, cerrarlo primero
+                  // para que el modal de contactos quede visible encima
+                  if (showEditEntidad) {
+                    setShowEditEntidad(false)
+                    setEditEntidad(null)
+                  }
+                  setShowContactoForm(true)
+                }}
                 className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-teal-400"
+                title="Agregar contacto"
               >
                 <Plus size={16} />
               </button>

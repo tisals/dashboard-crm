@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   createEntidad,
@@ -91,20 +91,37 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
   const estadoOptions = etapasContacto.filter(e => e.habilitado !== '0')
 
   // Get currently assigned user for this entity if editing
-  const { data: assignedUsersRes } = useQuery({
+  const { data: assignedUsersRes, isFetched: assignedFetched } = useQuery({
     queryKey: ['entidad-usuarios', entidad?.id],
     queryFn: () => getEntidadUsuarios(entidad!.id),
     enabled: !!entidad?.id,
   })
-  const assignedUsers = assignedUsersRes?.data ?? []
-  const initialAssignedUserIds = (assignedUsers ?? []).map((u: any) => u.id)
+  // Memoize para que la referencia no cambie en cada render (evita bucles de useEffect)
+  const assignedUsers: any[] = useMemo(
+    () => (Array.isArray(assignedUsersRes?.data) ? assignedUsersRes!.data : []),
+    [assignedUsersRes]
+  )
+  // Snapshot inicial de IDs — se captura UNA sola vez por entidad, SOLO después de
+  // que la query haya terminado. Antes, el `useEffect` corría antes de que la query
+  // resolviera, dejaba `initialAssignedUserIds = []` y `form.usuario_ids = []`,
+  // y al guardar se borraba todo (toRemove = oldIds).
+  const [initialAssignedUserIds, setInitialAssignedUserIds] = useState<number[]>([])
+  const [assignedLoadedFor, setAssignedLoadedFor] = useState<number | null>(null)
 
   useEffect(() => {
-    setForm(prev => ({
-      ...prev,
-      usuario_ids: assignedUsers.map((u: any) => u.id),
-    }))
-  }, [assignedUsers])
+    // Solo popular si la query ya terminó Y es la primera vez para esta entidad.
+    if (
+      entidad?.id &&
+      assignedFetched &&
+      assignedLoadedFor !== entidad.id
+    ) {
+      const ids = assignedUsers.map((u: any) => u.id)
+      console.log('[EntidadFormModal] Cargando comerciales iniciales para entidad', entidad.id, '→', ids)
+      setInitialAssignedUserIds(ids)
+      setForm(prev => ({ ...prev, usuario_ids: ids }))
+      setAssignedLoadedFor(entidad.id)
+    }
+  }, [entidad?.id, assignedFetched, assignedLoadedFor, assignedUsers])
 
   // Buscar ciudades con el texto ingresado
   const { data: ciudadesData, isLoading: loadingCiudades } = useQuery({
@@ -213,6 +230,14 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
       const oldIds = initialAssignedUserIds
       const toAdd = newIds.filter((id) => !oldIds.includes(id))
       const toRemove = oldIds.filter((id) => !newIds.includes(id))
+
+      console.log('[EntidadFormModal] Sync comerciales:', {
+        entidadId: savedEntity.id,
+        oldIds,
+        newIds,
+        toAdd,
+        toRemove,
+      })
 
       const errors: string[] = []
       // Helper: ignora errores idempotentes (404=no existe, 409=ya existe)
