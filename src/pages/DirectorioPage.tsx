@@ -453,11 +453,15 @@ export function DirectorioPage() {
               </h3>
               <button
                 onClick={() => {
-                  // Si el modal de edición de entidad está abierto, cerrarlo primero
-                  // para que el modal de contactos quede visible encima
+                  // Si cualquier modal de entidad está abierto, cerrarlo primero
+                  // (tanto el de crear como el de editar) para que el modal de
+                  // contactos quede visible encima.
                   if (showEditEntidad) {
                     setShowEditEntidad(false)
                     setEditEntidad(null)
+                  }
+                  if (showEntidadForm) {
+                    setShowEntidadForm(false)
                   }
                   setShowContactoForm(true)
                 }}

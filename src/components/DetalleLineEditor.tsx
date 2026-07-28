@@ -80,13 +80,14 @@ function LineRow({
     }
   }
 
-  const vrNum = line.vr_unitario === '' ? 0 : line.vr_unitario
-  const ivaDollar = line.iva === '' ? 0 : line.iva
-  const subtotal = line.cantidad * vrNum
+  const vrNum = Number(line.vr_unitario) || 0
+  const ivaDollar = Number(line.iva) || 0
+  const subtotal = Number(line.cantidad) * vrNum
   // El backend guarda `iva` como MONTO en pesos (decimal 15,2), no como %.
   // Calculamos el % solo para mostrarlo en el label, sin re-multiplicar.
   const ivaPercent = subtotal > 0 ? Math.round((ivaDollar / subtotal) * 10000) / 100 : 0
   // Total = subtotal + iva (lo que está en `vr_total` del backend)
+  // Usar `line.vr_total` del backend si está disponible, sino calcular.
   const totalLinea = line.vr_total != null ? Number(line.vr_total) : (subtotal + ivaDollar)
 
   return (
