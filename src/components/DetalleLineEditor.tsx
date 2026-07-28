@@ -81,8 +81,13 @@ function LineRow({
   }
 
   const vrNum = line.vr_unitario === '' ? 0 : line.vr_unitario
-  const ivaNum = line.iva === '' ? 0 : line.iva
-  const totalLinea = line.cantidad * vrNum * (1 + ivaNum / 100)
+  const ivaDollar = line.iva === '' ? 0 : line.iva
+  const subtotal = line.cantidad * vrNum
+  // El backend guarda `iva` como MONTO en pesos (decimal 15,2), no como %.
+  // Calculamos el % solo para mostrarlo en el label, sin re-multiplicar.
+  const ivaPercent = subtotal > 0 ? Math.round((ivaDollar / subtotal) * 10000) / 100 : 0
+  // Total = subtotal + iva (lo que está en `vr_total` del backend)
+  const totalLinea = line.vr_total != null ? Number(line.vr_total) : (subtotal + ivaDollar)
 
   return (
     <div className="bg-slate-900 rounded-lg border border-slate-600 p-3 space-y-2" ref={dropdownRef}>
@@ -157,20 +162,25 @@ function LineRow({
           />
         </div>
         <div>
-          <label className="block text-[10px] text-slate-500 mb-0.5">IVA %</label>
+          <label className="block text-[10px] text-slate-500 mb-0.5">IVA</label>
           <input
-            type="number"
-            value={line.iva === '' ? '' : line.iva}
+            type="text"
+            value={ivaDollar === 0 ? '' : `$${ivaDollar.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (${ivaPercent}%)`}
             readOnly
             className="w-full px-2 py-1.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-400 text-xs cursor-not-allowed"
-            title="IVA heredado del producto"
+            title="IVA heredado del producto (monto en pesos, derivado del %)"
           />
         </div>
       </div>
 
       {/* Total */}
-      <div className="text-right text-xs text-teal-400 font-medium pt-1 border-t border-slate-700/50">
-        Total: ${totalLinea.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-700/50">
+        <span className="text-slate-500">
+          Subtotal: ${subtotal.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </span>
+        <span className="text-teal-400 font-medium">
+          Total: ${totalLinea.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </span>
       </div>
     </div>
   )

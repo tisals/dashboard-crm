@@ -150,7 +150,7 @@ export function DirectorioPage() {
     enabled: !!selectedEntityId,
   });
   const entidadUsuarios: Usuario[] = (entidadUsuariosData as any)?.data ?? [];
-  const assignedComercial = entidadUsuarios[0];
+  const comercialesAsignados = entidadUsuarios;
 
   /* ----------   UI   ---------- */
   return (
@@ -419,11 +419,15 @@ export function DirectorioPage() {
                   <span>{selectedEntity.telefono}</span>
                 </div>
               )}
-              {assignedComercial ? (
-                <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm">
+              {comercialesAsignados.length > 0 ? (
+                <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm flex-wrap">
                   <Building2 size={14} />
-                  <span className="text-slate-300">{assignedComercial.nombre}</span>
-                  <span className="text-slate-600 text-xs">/ Comercial</span>
+                  <span className="text-slate-600 text-xs">Comercial{comercialesAsignados.length > 1 ? 'es' : ''}:</span>
+                  {comercialesAsignados.map((u, i) => (
+                    <span key={u.id} className="text-slate-300">
+                      {u.nombre}{i < comercialesAsignados.length - 1 ? ',' : ''}
+                    </span>
+                  ))}
                 </div>
               ) : selectedEntity.nombre_comercial ? (
                 <div className="mt-1 flex items-center gap-2 text-slate-400 text-sm">
@@ -636,6 +640,7 @@ export function DirectorioPage() {
           mode="split"
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['entidades'] });
+            queryClient.invalidateQueries({ queryKey: ['entidad-usuarios'] });
             setShowEntidadForm(false);
           }}
           onClose={() => setShowEntidadForm(false)}
@@ -647,6 +652,7 @@ export function DirectorioPage() {
           entidad={editEntidad}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['entidades'] });
+            queryClient.invalidateQueries({ queryKey: ['entidad-usuarios'] });
             setShowEditEntidad(false);
             setEditEntidad(null);
           }}
