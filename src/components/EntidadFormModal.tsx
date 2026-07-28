@@ -159,29 +159,38 @@ export function EntidadFormModal({ entidad, onSuccess, onClose, mode = 'overlay'
     }
   }, [])
 
-  useEffect(() => {
-    if (entidad) {
-      setForm({
-        tipo_persona: entidad.tipo_persona === 'Juridica' ? 'Juridica' : 'Natural',
-        tipo_id: entidad.tipo_id ?? '',
-        identificacion: entidad.identificacion ?? '',
-        nombre: entidad.nombre ?? '',
-        nombre_comercial: entidad.nombre_comercial ?? '',
-        direccion: entidad.direccion ?? '',
-        ciudad_cod: entidad.ciudad_cod ?? '',
-        dominio: entidad.dominio ?? '',
-        linea_negocio: entidad.linea_negocio ?? '',
-        email: entidad.email ?? '',
-        telefono: entidad.telefono ?? '',
-        cantidad_empleados: entidad.cantidad_empleados?.toString() ?? '',
-        rut: entidad.rut ?? '',
-        logo: entidad.logo ?? '',
-        estado: entidad.estado ?? 'Prospecto',
-        usuario_ids: [],
-        nuevo_comercial_id: '',
-      })
-    }
-  }, [entidad])
+  // Solo resetear el form cuando cambia el ID de la entidad (no en cada render),
+// porque `entidad` es un objeto que cambia de referencia en cada render del padre
+// y pisaría `usuario_ids` después de que carguemos los comerciales asignados.
+const lastEntidadIdRef = useRef<number | null>(null)
+useEffect(() => {
+  if (!entidad) return
+  if (lastEntidadIdRef.current === entidad.id) return // mismo entity, no resetear
+  lastEntidadIdRef.current = entidad.id
+
+  setForm({
+    tipo_persona: entidad.tipo_persona === 'Juridica' ? 'Juridica' : 'Natural',
+    tipo_id: entidad.tipo_id ?? '',
+    identificacion: entidad.identificacion ?? '',
+    nombre: entidad.nombre ?? '',
+    nombre_comercial: entidad.nombre_comercial ?? '',
+    direccion: entidad.direccion ?? '',
+    ciudad_cod: entidad.ciudad_cod ?? '',
+    dominio: entidad.dominio ?? '',
+    linea_negocio: entidad.linea_negocio ?? '',
+    email: entidad.email ?? '',
+    telefono: entidad.telefono ?? '',
+    cantidad_empleados: entidad.cantidad_empleados?.toString() ?? '',
+    rut: entidad.rut ?? '',
+    logo: entidad.logo ?? '',
+    estado: entidad.estado ?? 'Prospecto',
+    usuario_ids: [], // se populará desde el useEffect de comerciales cuando cargue la query
+    nuevo_comercial_id: '',
+  })
+  // Resetear también el snapshot de comerciales para la nueva entidad
+  setInitialAssignedUserIds([])
+  setAssignedLoadedFor(null)
+}, [entidad?.id])
 
   function validate(): boolean {
     const errs: FormErrors = {}
