@@ -17,6 +17,15 @@ export interface LineaForm {
 interface Props {
   lines: LineaForm[]
   onChange: (lines: LineaForm[]) => void
+  /**
+   * Called when the user asks to delete a single line.
+   * If the line is persisted (has `id`), the parent should call
+   * `deleteDetalleOportunidad` and remove it from `lines` on success.
+   * If the line is not yet persisted (no `id`), the parent can just remove it.
+   * The component already removes the line from local state; the parent
+   * decides whether to also call the backend.
+   */
+  onDelete?: (line: LineaForm) => void
 }
 
 function LineRow({
@@ -187,14 +196,21 @@ function LineRow({
   )
 }
 
-export function DetalleLineEditor({ lines, onChange }: Props) {
+export function DetalleLineEditor({ lines, onChange, onDelete }: Props) {
   function addLine() {
     onChange([...lines, { producto_id: null, concepto: '', descripcion: '', cantidad: 1, vr_unitario: '', iva: '' }])
   }
 
   function removeLine(i: number) {
     if (lines.length <= 1) return
-    onChange(lines.filter((_, idx) => idx !== i))
+    const line = lines[i]
+    if (onDelete) {
+      // Let the parent handle the deletion (calls backend if persisted).
+      onDelete(line)
+    } else {
+      // Fallback: just remove from local state.
+      onChange(lines.filter((_, idx) => idx !== i))
+    }
   }
 
   function updateLine(i: number, field: keyof LineaForm, value: string | number | null) {

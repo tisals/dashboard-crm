@@ -36,6 +36,7 @@ import {
   getDetallesOportunidad,
   createDetalleOportunidad,
   updateDetalleOportunidad,
+  deleteDetalleOportunidad,
   getProductos,
   getMaestros,
   getEntidadUsuarios,
@@ -1237,6 +1238,35 @@ export function CRMPage() {
     }
   }
 
+  async function handleDeleteLine(line: LineaForm) {
+    if (!selectedOportunidadId) return
+
+    // If the line is not yet persisted, it's purely local — just drop it.
+    if (!line.id) {
+      setLineas(prev => prev.filter(l => l !== line))
+      return
+    }
+
+    if (!window.confirm(`¿Eliminar la línea #${line.id}? Esta acción no se puede deshacer.`)) {
+      return
+    }
+
+    try {
+      await deleteDetalleOportunidad(line.id)
+      setLineas(prev => prev.filter(l => l.id !== line.id))
+      queryClient.invalidateQueries({ queryKey: ['detalles', selectedOportunidadId] })
+      queryClient.invalidateQueries({ queryKey: ['oportunidades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      setLineasSuccess(true)
+      setTimeout(() => setLineasSuccess(false), 3000)
+    } catch (err: unknown) {
+      const msg = err instanceof Error && 'response' in err
+        ? (err as any).response?.data?.error ?? 'Error del servidor'
+        : err instanceof Error ? err.message : 'Error al eliminar línea'
+      setLineasError(msg)
+    }
+  }
+
   function toggleSection(section: string) {
     setCollapsedSections(prev => {
       const next = new Set(prev)
@@ -1989,15 +2019,9 @@ export function CRMPage() {
                     <DetalleLineEditor
                       lines={lineas}
                       onChange={setLineas}
+                      onDelete={handleDeleteLine}
                     />
                     <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => setLineas(prev => prev.slice(0, -1))}
-                        disabled={lineasSaving}
-                        className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-300 text-sm font-medium rounded-lg transition-colors"
-                      >
-                        Eliminar última
-                      </button>
                       <button
                         onClick={() => setLineas(prev => [...prev, { producto_id: null, concepto: '', descripcion: '', cantidad: 1, vr_unitario: '', iva: '' }])}
                         disabled={lineasSaving}
