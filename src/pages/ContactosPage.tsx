@@ -9,6 +9,8 @@ import { SeguimientoModal } from '../components/SeguimientoModal'
 import { SeguimientoTimeline } from '../components/SeguimientoTimeline'
 import { CommonCard } from '../components/CommonCard'
 import { EntidadSearchSelect } from '../components/EntidadSearchSelect'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { showToast } from '../components/Toast'
 
 export function ContactosPage() {
   const { user } = useAuth()
@@ -22,6 +24,7 @@ export function ContactosPage() {
   const [selectedContacto, setSelectedContacto] = useState<Contacto | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [seguimientoContacto, setSeguimientoContacto] = useState<Contacto | null>(null)
+  const [contactToDelete, setContactToDelete] = useState<Contacto | null>(null)
 
   const { data: entidadesData } = useQuery({
     queryKey: ['entidades', 'list'],
@@ -87,7 +90,21 @@ export function ContactosPage() {
   function handleEdit(c: Contacto) { setSelectedContacto(c); setEditMode(true); setFormOpen(true) }
   function handleView(c: Contacto) { setSelectedContacto(c); setDetailOpen(true) }
   function handleDelete(c: Contacto) {
-    if (confirm(`¿Eliminar a ${c.nombres} ${c.apellidos}?`)) deleteMut.mutate(c.id)
+    setContactToDelete(c)
+  }
+
+  function handleConfirmDelete() {
+    if (!contactToDelete) return
+    deleteMut.mutate(contactToDelete.id, {
+      onSuccess: () => {
+        showToast(`Contacto ${contactToDelete.nombres} ${contactToDelete.apellidos} eliminado`, 'success')
+        setContactToDelete(null)
+      },
+      onError: (err) => {
+        const msg = err instanceof Error ? err.message : 'Error al eliminar contacto'
+        showToast(msg, 'error')
+      },
+    })
   }
 
   function getEntidadName(entidadId: number | null, entidadNombre?: string): string {
@@ -265,6 +282,29 @@ export function ContactosPage() {
           }}
         />
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={!!contactToDelete}
+        variant="danger"
+        title="Eliminar contacto"
+        message={
+          contactToDelete ? (
+            <>
+              ¿Eliminar a <strong className="text-slate-100">{contactToDelete.nombres} {contactToDelete.apellidos}</strong>?
+              <br />
+              <span className="text-slate-400 text-xs">
+                Esta acción mueve el contacto a la papelera. No se borrará permanentemente.
+              </span>
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={deleteMut.isPending}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setContactToDelete(null)}
+      />
       </div>
   )
 }

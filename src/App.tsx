@@ -25,6 +25,7 @@ import { MaestrosPage } from './pages/MaestrosPage'
 import { SeguimientosPage } from './pages/SeguimientosPage'
 import { SeguimientoCalendarioPage } from './pages/SeguimientoCalendarioPage'
 import './index.css'
+import { ToastContainer } from './components/Toast'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +52,7 @@ function App() {
               {/* Protected routes */}
               <Route path="/*" element={<ProtectedLayout />} />
             </Routes>
+            <ToastContainer />
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
