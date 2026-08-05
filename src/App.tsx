@@ -25,6 +25,7 @@ import { MaestrosPage } from './pages/MaestrosPage'
 import { SeguimientosPage } from './pages/SeguimientosPage'
 import { SeguimientoCalendarioPage } from './pages/SeguimientoCalendarioPage'
 import { PersonasPage } from './pages/PersonasPage'
+import { AppsPorEntidadPage } from './pages/AppsPorEntidadPage'
 import './index.css'
 import { ToastContainer } from './components/Toast'
 
@@ -124,6 +125,7 @@ function ProtectedLayout() {
             <Route path="/seguimientos/calendario" element={<SeguimientoCalendarioPage />} />
             <Route path="/seguimientos" element={<SeguimientosPage />} />
             <Route path="/settings/personas" element={<PersonasPage />} />
+            <Route path="/settings/apps" element={<AppsPorEntidadPage />} />
           </Routes>
         </main>
 

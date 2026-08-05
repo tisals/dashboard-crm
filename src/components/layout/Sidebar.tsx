@@ -21,6 +21,7 @@ import {
   Flag,
   GitBranch,
   UserCircle,
+  Boxes,
 } from 'lucide-react'
 
 const moduleIcons: Record<string, React.ComponentType<any>> = {
@@ -41,6 +42,7 @@ const moduleIcons: Record<string, React.ComponentType<any>> = {
   [MODULES.MARCAS]: Flag,
   [MODULES.PIPELINES]: GitBranch,
   [MODULES.SETTINGS_PERSONAS]: UserCircle,
+  [MODULES.APPS_POR_ENTIDAD]: Boxes,
 }
 
 const moduleLabels: Record<string, string> = {
@@ -61,6 +63,7 @@ const moduleLabels: Record<string, string> = {
   [MODULES.MARCAS]: 'Marcas / Propia',
   [MODULES.PIPELINES]: 'Pipelines',
   [MODULES.SETTINGS_PERSONAS]: 'Personas',
+  [MODULES.APPS_POR_ENTIDAD]: 'Apps por Entidad',
 }
 
 interface GroupDef {
@@ -83,7 +86,7 @@ const GROUPS: GroupDef[] = [
   },
   {
     label: 'Configuración',
-    modules: [MODULES.SETTINGS_PERSONAS],
+    modules: [MODULES.SETTINGS_PERSONAS, MODULES.APPS_POR_ENTIDAD],
   },
 ]
 
@@ -94,6 +97,7 @@ function moduleToPath(module: string): string {
   if (module === MODULES.CRM) return '/crm/oportunidad'
   if (module === MODULES.SEGUIMIENTOS) return '/seguimientos'
   if (module === MODULES.SETTINGS_PERSONAS) return '/settings/personas'
+  if (module === MODULES.APPS_POR_ENTIDAD) return '/settings/apps'
   return `/${module}`
 }
 
