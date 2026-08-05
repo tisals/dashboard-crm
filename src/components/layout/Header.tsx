@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import { Search, Bell, Sun, Moon, Menu, X, LogOut, User as UserIcon, Settings } from 'lucide-react'
+import { MyAppsWidget } from '../MyAppsWidget'
 
 interface HeaderProps {
   onMenuToggle?: () => void
@@ -82,6 +83,9 @@ export function Header({ onMenuToggle, mobileMenuOpen }: HeaderProps) {
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
+
+          {/* My Apps (apps the user has access to, transitively) */}
+          <MyAppsWidget />
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>

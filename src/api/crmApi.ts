@@ -15,6 +15,8 @@ import type {
   AppCatalogCreate,
   AppAsignada,
   EntidadConApp,
+  MyApp,
+  MyAppDetail,
   Seguimiento,
   ContactoAccionPayload,
   CotizacionData,
@@ -345,6 +347,18 @@ export async function assignAppToEntidad(entidadId: number, appId: number, paylo
 
 export async function removeAppFromEntidad(entidadId: number, appId: number) {
   const { data } = await crmApi.delete<ApiResponse<{ removed: boolean }>>(`/entidad/${entidadId}/apps/${appId}`)
+  return data
+}
+
+// ── Me / My apps (apps the auth user has access to) ──────────
+
+export async function getMyApps() {
+  const { data } = await crmApi.get<ApiResponse<{ apps: MyApp[]; total: number }>>('/me/apps')
+  return data
+}
+
+export async function getMyAppPermissions(slug: string) {
+  const { data } = await crmApi.get<ApiResponse<MyAppDetail>>(`/me/apps/${slug}/permisos`)
   return data
 }
 

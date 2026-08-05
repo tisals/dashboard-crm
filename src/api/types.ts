@@ -304,6 +304,40 @@ export interface EntidadConApp {
   notas?: string | null
 }
 
+// ── Me / My Apps (transitively derived from entidad_usuario + app_entidad) ──
+
+export interface MyApp {
+  id: number
+  slug: string
+  nombre: string
+  tipo: 'internal' | 'external' | 'customer'
+  auth_type: 'sanctum' | 'api_key'
+  activo: boolean
+  entidades_count: number
+}
+
+export interface MyAppPermission {
+  entidad_id: number
+  entidad_nombre: string
+  identificacion?: string
+  estado: 'Activo' | 'Suspendido' | 'Cancelado' | 'Trial'
+  fecha_contrato?: string | null
+  fecha_vencimiento?: string | null
+  notas?: string | null
+}
+
+export interface MyAppDetail {
+  app: {
+    id: number
+    slug: string
+    nombre: string
+    tipo: string
+    auth_type: string
+  }
+  permisos: MyAppPermission[]
+  total_entidades: number
+}
+
 // ── Seguimiento ──────────────────────────────────
 
 export type SeguimientoTipo = 'Llamada' | 'Correo' | 'Reunion' | 'Nota' | 'Otro'
