@@ -228,6 +228,34 @@ export interface ContactoCreate {
   etapa?: string | null
 }
 
+export interface Persona {
+  id: number
+  identificacion_tipo?: string | null
+  identificacion_numero?: string | null
+  nombres: string
+  apellidos?: string | null
+  email_principal?: string | null
+  telefono_principal?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+  pais?: string | null
+  nombre_completo?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PersonaCreate {
+  identificacion_tipo?: string | null
+  identificacion_numero?: string | null
+  nombres: string
+  apellidos?: string | null
+  email_principal?: string | null
+  telefono_principal?: string | null
+  direccion?: string | null
+  ciudad?: string | null
+  pais?: string | null
+}
+
 // ── Seguimiento ──────────────────────────────────
 
 export type SeguimientoTipo = 'Llamada' | 'Correo' | 'Reunion' | 'Nota' | 'Otro'

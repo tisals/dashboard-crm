@@ -44,6 +44,7 @@ export const MODULES = {
   PRODUCTOS: 'productos',
   MARCAS: 'marcas',
   PIPELINES: 'pipelines',
+  SETTINGS_PERSONAS: 'settings-personas',
 } as const;
 
 // Definición de permisos por módulo
@@ -64,6 +65,7 @@ const allPermissions: Permission[] = [
   { module: MODULES.PRODUCTOS, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.MARCAS, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.PIPELINES, actions: ['create', 'read', 'update', 'delete'] },
+  { module: MODULES.SETTINGS_PERSONAS, actions: ['create', 'read', 'update', 'delete'] },
 ];
 
 // Roles predefinidos
@@ -89,8 +91,9 @@ export const ROLES: Record<RoleSlug, Role> = {
       { module: MODULES.CONTACTOS, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.CRM, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.SEGUIMIENTOS, actions: ['create', 'read', 'update', 'delete'] },
+      { module: MODULES.SETTINGS_PERSONAS, actions: ['read'] },
     ],
-    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES, MODULES.SEGUIMIENTOS],
+    modules: [MODULES.DASHBOARD, MODULES.DIRECTORIO, MODULES.CONTACTOS, MODULES.CRM, MODULES.PIPELINES, MODULES.SEGUIMIENTOS, MODULES.SETTINGS_PERSONAS],
     dashboard: 'crm',
   },
 
@@ -124,8 +127,9 @@ export const ROLES: Record<RoleSlug, Role> = {
       { module: MODULES.CIUDADES, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.PRODUCTOS, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.MARCAS, actions: ['create', 'read', 'update', 'delete'] },
+      { module: MODULES.SETTINGS_PERSONAS, actions: ['create', 'read', 'update', 'delete'] },
     ],
-    modules: [MODULES.DASHBOARD, MODULES.ERP_DASHBOARD, MODULES.SEGURIDAD, MODULES.MAESTROS, MODULES.DIRECTORIO, MODULES.TALENTO, MODULES.FINANZAS, MODULES.SEGUIMIENTOS, MODULES.USUARIOS, MODULES.CIUDADES, MODULES.PRODUCTOS, MODULES.MARCAS],
+    modules: [MODULES.DASHBOARD, MODULES.ERP_DASHBOARD, MODULES.SEGURIDAD, MODULES.MAESTROS, MODULES.DIRECTORIO, MODULES.TALENTO, MODULES.FINANZAS, MODULES.SEGUIMIENTOS, MODULES.USUARIOS, MODULES.CIUDADES, MODULES.PRODUCTOS, MODULES.MARCAS, MODULES.SETTINGS_PERSONAS],
     dashboard: 'admin',
   },
 };

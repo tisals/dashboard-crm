@@ -24,6 +24,7 @@ import { ProductosPage } from './pages/ProductosPage'
 import { MaestrosPage } from './pages/MaestrosPage'
 import { SeguimientosPage } from './pages/SeguimientosPage'
 import { SeguimientoCalendarioPage } from './pages/SeguimientoCalendarioPage'
+import { PersonasPage } from './pages/PersonasPage'
 import './index.css'
 import { ToastContainer } from './components/Toast'
 
@@ -122,6 +123,7 @@ function ProtectedLayout() {
             <Route path="/erp" element={<DashboardPage />} />
             <Route path="/seguimientos/calendario" element={<SeguimientoCalendarioPage />} />
             <Route path="/seguimientos" element={<SeguimientosPage />} />
+            <Route path="/settings/personas" element={<PersonasPage />} />
           </Routes>
         </main>
 

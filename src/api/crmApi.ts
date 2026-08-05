@@ -9,6 +9,8 @@ import type {
   OportunidadCreate,
   Contacto,
   ContactoCreate,
+  Persona,
+  PersonaCreate,
   Seguimiento,
   ContactoAccionPayload,
   CotizacionData,
@@ -265,6 +267,33 @@ export async function deleteContacto(id: number) {
 
 export async function reasignarContacto(contactoId: number, payload: { entidad_id: number; merge?: boolean }) {
   const { data } = await crmApi.post<ApiResponse<Contacto>>(`/contacto/${contactoId}/reasignar`, payload)
+  return data
+}
+
+// ── Personas (Party Model) ────────────────────────────
+
+export async function getPersonas(params?: { search?: string; ciudad?: string; pais?: string; per_page?: number; page?: number }) {
+  const { data } = await crmApi.get<ApiResponse<{ data: Persona[]; total: number; current_page: number; last_page: number }>>('/personas', { params })
+  return data
+}
+
+export async function getPersona(id: number) {
+  const { data } = await crmApi.get<ApiResponse<Persona>>(`/personas/${id}`)
+  return data
+}
+
+export async function createPersona(payload: PersonaCreate) {
+  const { data } = await crmApi.post<ApiResponse<Persona>>('/personas', payload)
+  return data
+}
+
+export async function updatePersona(id: number, payload: Partial<PersonaCreate>) {
+  const { data } = await crmApi.put<ApiResponse<Persona>>(`/personas/${id}`, payload)
+  return data
+}
+
+export async function deletePersona(id: number) {
+  const { data } = await crmApi.delete<ApiResponse<null>>(`/personas/${id}`)
   return data
 }
 
