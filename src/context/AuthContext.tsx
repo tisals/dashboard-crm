@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { RoleSlug, ROLES, hasPermission, canAccessModule } from '../config/roles'
+import { getMyApps } from '../api/crmApi'
+import type { MyApp } from '../api/types'
 
 interface AuthUser {
   id: number
@@ -12,6 +14,12 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
+  /** Apps the user has access to (transitively derived). */
+  apps: MyApp[]
+  /** True while apps are being fetched. */
+  appsLoading: boolean
+  /** Manually re-fetch apps (e.g. after admin changes). */
+  refreshApps: () => Promise<void>
   login: (userData: { id: number; email: string; nombre: string; rol_id: number; token?: string }) => Promise<void>
   logout: () => void
   hasPermission: (module: string, action: 'create' | 'read' | 'update' | 'delete') => boolean
@@ -39,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   })
 
+  const [apps, setApps] = useState<MyApp[]>([])
+  const [appsLoading, setAppsLoading] = useState(false)
+
   const isAuthenticated = !!user
   const role = user ? ROLES[user.rol_slug] : null
 
@@ -47,6 +58,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const entry = Object.values(ROLES).find(r => r.id === rolId)
     return (entry?.slug ?? 'super_admin') as RoleSlug
   }
+
+  const fetchApps = useCallback(async () => {
+    if (!user) return
+    setAppsLoading(true)
+    try {
+      const res = await getMyApps()
+      setApps(res.data?.apps ?? [])
+    } catch {
+      // Silent — the widget can show empty state. Auth failure will be caught elsewhere.
+      setApps([])
+    } finally {
+      setAppsLoading(false)
+    }
+  }, [user])
+
+  // Fetch apps whenever the user logs in (or on mount if already logged in)
+  useEffect(() => {
+    if (user) {
+      fetchApps()
+    } else {
+      setApps([])
+    }
+  }, [user, fetchApps])
 
   async function login(userData: { id: number; email: string; nombre: string; rol_id: number; token?: string }) {
     const rol_slug = rolIdToSlug(userData.rol_id)
@@ -57,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function logout() {
     setUser(null)
+    setApps([])
     localStorage.removeItem('auth_token')
     localStorage.removeItem('auth_user')
   }
@@ -75,6 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
+      apps,
+      appsLoading,
+      refreshApps: fetchApps,
       login,
       logout,
       hasPermission: checkPermission,
