@@ -31,7 +31,9 @@ import { CommonCard } from '../components/CommonCard';
 import { SeguimientoModal } from '../components/SeguimientoModal';
 import { SlidePanel } from '../components/SlidePanel';
 import { ReasignarOportunidadModal } from '../components/ReasignarOportunidadModal';
-import type { Contacto, Entidad, Oportunidad } from '../api/types';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { showToast } from '../components/Toast';
+import type { Contacto, Entidad, Oportunidad, Usuario } from '../api/types';
 
 const PER_PAGE = 50;
 
@@ -52,6 +54,9 @@ export function DirectorioPage() {
   const [seguimientoEntidad, setSeguimientoEntidad] = useState<Entidad | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [oppToReasign, setOppToReasign] = useState<Oportunidad | null>(null);
+  const [contactToDelete, setContactToDelete] = useState<Contacto | null>(null);
+  const [deletingContact, setDeletingContact] = useState(false);
+  const [entityToDelete, setEntityToDelete] = useState<Entidad | null>(null);
   const queryClient = useQueryClient();
 
   /* ----------   AUTH   ---------- */
@@ -67,6 +72,24 @@ export function DirectorioPage() {
       setDetailOpen(false);
     },
   });
+
+  async function handleConfirmDeleteContact() {
+    if (!contactToDelete) return;
+    setDeletingContact(true);
+    try {
+      await deleteContacto(contactToDelete.id);
+      queryClient.invalidateQueries({ queryKey: ['contactos'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['entidades'] });
+      queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
+      showToast(`Contacto ${contactToDelete.nombres} ${contactToDelete.apellidos} eliminado`, 'success');
+      setContactToDelete(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar contacto';
+      showToast(msg, 'error');
+    } finally {
+      setDeletingContact(false);
+    }
+  }
 
   const {
     data: entidadesPages,
@@ -107,9 +130,21 @@ export function DirectorioPage() {
   }
 
   function handleDeleteEntidad(entity: Entidad) {
-    if (window.confirm(`¿Eliminar la entidad "${entity.nombre}"? Esta acción no se puede deshacer.`)) {
-      deleteEntidadMut.mutate(entity.id);
-    }
+    setEntityToDelete(entity);
+  }
+
+  function handleConfirmDeleteEntidad() {
+    if (!entityToDelete) return;
+    deleteEntidadMut.mutate(entityToDelete.id, {
+      onSuccess: () => {
+        showToast(`Entidad ${entityToDelete.nombre} eliminada`, 'success');
+        setEntityToDelete(null);
+      },
+      onError: (err) => {
+        const msg = err instanceof Error ? err.message : 'Error al eliminar entidad';
+        showToast(msg, 'error');
+      },
+    });
   }
 
   /* ----------   EFFECTS   ---------- */
@@ -493,29 +528,7 @@ export function DirectorioPage() {
                     onDelete={
                       isAdmin
                         ? (c) => {
-                            if (
-                              window.confirm(`¿Eliminar contacto ${c.nombres} ${c.apellidos}?`)
-                            ) {
-                              deleteContacto(c.id).then(() => {
-                                queryClient.invalidateQueries({
-                                  queryKey: ['contactos'],
-  });
-
-  const reasignarOportunidad = useMutation({
-    mutationFn: ({ id, entidad_id }: { id: number; entidad_id: number }) =>
-      updateOportunidad(id, { entidad_id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['entidades'] });
-      queryClient.invalidateQueries({ queryKey: ['oportunidades'] });
-      if (selectedEntityId) {
-        queryClient.invalidateQueries({ queryKey: ['oportunidades', 'byEntidad', selectedEntityId] });
-      }
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
-  });
-
-                              });
-                            }
+                            setContactToDelete(c);
                           }
                         : undefined
                     }
@@ -712,6 +725,48 @@ export function DirectorioPage() {
           onSuccess={() => setOppToReasign(null)}
         />
       )}
+      <ConfirmModal
+        open={!!contactToDelete}
+        variant="danger"
+        title="Eliminar contacto"
+        message={
+          contactToDelete ? (
+            <>
+              ¿Eliminar a <strong className="text-slate-100">{contactToDelete.nombres} {contactToDelete.apellidos}</strong>?
+              <br />
+              <span className="text-slate-400 text-xs">
+                Esta acción mueve el contacto a la papelera. No se borrará permanentemente.
+              </span>
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={deletingContact}
+        onConfirm={handleConfirmDeleteContact}
+        onCancel={() => setContactToDelete(null)}
+      />
+      <ConfirmModal
+        open={!!entityToDelete}
+        variant="danger"
+        title="Eliminar entidad"
+        message={
+          entityToDelete ? (
+            <>
+              ¿Eliminar la entidad <strong className="text-slate-100">{entityToDelete.nombre}</strong>?
+              <br />
+              <span className="text-slate-400 text-xs">
+                Esta acción no se puede deshacer.
+              </span>
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={deleteEntidadMut.isPending}
+        onConfirm={handleConfirmDeleteEntidad}
+        onCancel={() => setEntityToDelete(null)}
+      />
     </div>
   );
 }
