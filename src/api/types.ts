@@ -256,6 +256,54 @@ export interface PersonaCreate {
   pais?: string | null
 }
 
+export interface AppCatalog {
+  id: number
+  slug: string
+  nombre: string
+  tipo: 'internal' | 'external' | 'customer'
+  auth_type: 'sanctum' | 'api_key'
+  activo: boolean
+  descripcion?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AppCatalogCreate {
+  slug: string
+  nombre: string
+  tipo: 'internal' | 'external' | 'customer'
+  auth_type: 'sanctum' | 'api_key'
+  activo?: boolean
+  descripcion?: string | null
+}
+
+export interface AppAsignada {
+  pivot_id: number
+  id: number
+  slug: string
+  nombre: string
+  tipo: string
+  auth_type: string
+  activo: boolean
+  fecha_contrato?: string | null
+  fecha_vencimiento?: string | null
+  estado: 'Activo' | 'Suspendido' | 'Cancelado' | 'Trial'
+  notas?: string | null
+}
+
+export interface EntidadConApp {
+  pivot_id: number
+  id: number
+  nombre: string
+  identificacion?: string
+  entidad_estado?: string
+  dominio?: string
+  fecha_contrato?: string | null
+  fecha_vencimiento?: string | null
+  assignment_estado: 'Activo' | 'Suspendido' | 'Cancelado' | 'Trial'
+  notas?: string | null
+}
+
 // ── Seguimiento ──────────────────────────────────
 
 export type SeguimientoTipo = 'Llamada' | 'Correo' | 'Reunion' | 'Nota' | 'Otro'

@@ -11,6 +11,10 @@ import type {
   ContactoCreate,
   Persona,
   PersonaCreate,
+  AppCatalog,
+  AppCatalogCreate,
+  AppAsignada,
+  EntidadConApp,
   Seguimiento,
   ContactoAccionPayload,
   CotizacionData,
@@ -294,6 +298,53 @@ export async function updatePersona(id: number, payload: Partial<PersonaCreate>)
 
 export async function deletePersona(id: number) {
   const { data } = await crmApi.delete<ApiResponse<null>>(`/personas/${id}`)
+  return data
+}
+
+// ── Apps (catalog + assignments) ───────────────────
+
+export async function getApps(params?: { search?: string; tipo?: string; activo?: boolean; per_page?: number; page?: number }) {
+  const { data } = await crmApi.get<ApiResponse<{ data: AppCatalog[]; total: number; current_page: number; last_page: number }>>('/apps', { params })
+  return data
+}
+
+export async function getApp(id: number) {
+  const { data } = await crmApi.get<ApiResponse<AppCatalog>>(`/apps/${id}`)
+  return data
+}
+
+export async function createApp(payload: AppCatalogCreate) {
+  const { data } = await crmApi.post<ApiResponse<AppCatalog>>('/apps', payload)
+  return data
+}
+
+export async function updateApp(id: number, payload: Partial<AppCatalogCreate>) {
+  const { data } = await crmApi.put<ApiResponse<AppCatalog>>(`/apps/${id}`, payload)
+  return data
+}
+
+export async function deleteApp(id: number) {
+  const { data } = await crmApi.delete<ApiResponse<null>>(`/apps/${id}`)
+  return data
+}
+
+export async function getEntidadesByApp(appId: number) {
+  const { data } = await crmApi.get<ApiResponse<EntidadConApp[]>>(`/apps/${appId}/entidades`)
+  return data
+}
+
+export async function getAppsByEntidad(entidadId: number) {
+  const { data } = await crmApi.get<ApiResponse<AppAsignada[]>>(`/entidad/${entidadId}/apps`)
+  return data
+}
+
+export async function assignAppToEntidad(entidadId: number, appId: number, payload?: { fecha_contrato?: string; fecha_vencimiento?: string; estado?: 'Activo' | 'Suspendido' | 'Cancelado' | 'Trial'; notas?: string }) {
+  const { data } = await crmApi.post<ApiResponse<{ pivot_id: number }>>(`/entidad/${entidadId}/apps/${appId}`, payload ?? {})
+  return data
+}
+
+export async function removeAppFromEntidad(entidadId: number, appId: number) {
+  const { data } = await crmApi.delete<ApiResponse<{ removed: boolean }>>(`/entidad/${entidadId}/apps/${appId}`)
   return data
 }
 
