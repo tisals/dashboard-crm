@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   Flag,
   GitBranch,
+  UserCircle,
 } from 'lucide-react'
 
 const moduleIcons: Record<string, React.ComponentType<any>> = {
@@ -39,6 +40,7 @@ const moduleIcons: Record<string, React.ComponentType<any>> = {
   [MODULES.PRODUCTOS]: Package,
   [MODULES.MARCAS]: Flag,
   [MODULES.PIPELINES]: GitBranch,
+  [MODULES.SETTINGS_PERSONAS]: UserCircle,
 }
 
 const moduleLabels: Record<string, string> = {
@@ -58,6 +60,7 @@ const moduleLabels: Record<string, string> = {
   [MODULES.PRODUCTOS]: 'Productos',
   [MODULES.MARCAS]: 'Marcas / Propia',
   [MODULES.PIPELINES]: 'Pipelines',
+  [MODULES.SETTINGS_PERSONAS]: 'Personas',
 }
 
 interface GroupDef {
@@ -78,6 +81,10 @@ const GROUPS: GroupDef[] = [
     label: 'Seguridad',
     modules: [MODULES.SEGURIDAD, MODULES.MARCAS, MODULES.MAESTROS, MODULES.CIUDADES, MODULES.PRODUCTOS, MODULES.USUARIOS],
   },
+  {
+    label: 'Configuración',
+    modules: [MODULES.SETTINGS_PERSONAS],
+  },
 ]
 
 function moduleToPath(module: string): string {
@@ -86,6 +93,7 @@ function moduleToPath(module: string): string {
   if (module === MODULES.PIPELINES) return '/crm/pipelines'
   if (module === MODULES.CRM) return '/crm/oportunidad'
   if (module === MODULES.SEGUIMIENTOS) return '/seguimientos'
+  if (module === MODULES.SETTINGS_PERSONAS) return '/settings/personas'
   return `/${module}`
 }
 
