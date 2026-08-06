@@ -46,6 +46,7 @@ export const MODULES = {
   PIPELINES: 'pipelines',
   SETTINGS_PERSONAS: 'settings-personas',
   APPS_POR_ENTIDAD: 'apps-por-entidad',
+  SETTINGS_USUARIOS_PERMISOS: 'settings-usuarios-permisos',
 } as const;
 
 // Definición de permisos por módulo
@@ -68,6 +69,7 @@ const allPermissions: Permission[] = [
   { module: MODULES.PIPELINES, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.SETTINGS_PERSONAS, actions: ['create', 'read', 'update', 'delete'] },
   { module: MODULES.APPS_POR_ENTIDAD, actions: ['create', 'read', 'update', 'delete'] },
+  { module: MODULES.SETTINGS_USUARIOS_PERMISOS, actions: ['create', 'read', 'update', 'delete'] },
 ];
 
 // Roles predefinidos
@@ -132,8 +134,9 @@ export const ROLES: Record<RoleSlug, Role> = {
       { module: MODULES.MARCAS, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.SETTINGS_PERSONAS, actions: ['create', 'read', 'update', 'delete'] },
       { module: MODULES.APPS_POR_ENTIDAD, actions: ['create', 'read', 'update', 'delete'] },
+      { module: MODULES.SETTINGS_USUARIOS_PERMISOS, actions: ['create', 'read', 'update', 'delete'] },
     ],
-    modules: [MODULES.DASHBOARD, MODULES.ERP_DASHBOARD, MODULES.SEGURIDAD, MODULES.MAESTROS, MODULES.DIRECTORIO, MODULES.TALENTO, MODULES.FINANZAS, MODULES.SEGUIMIENTOS, MODULES.USUARIOS, MODULES.CIUDADES, MODULES.PRODUCTOS, MODULES.MARCAS, MODULES.SETTINGS_PERSONAS, MODULES.APPS_POR_ENTIDAD],
+    modules: [MODULES.DASHBOARD, MODULES.ERP_DASHBOARD, MODULES.SEGURIDAD, MODULES.MAESTROS, MODULES.DIRECTORIO, MODULES.TALENTO, MODULES.FINANZAS, MODULES.SEGUIMIENTOS, MODULES.USUARIOS, MODULES.CIUDADES, MODULES.PRODUCTOS, MODULES.MARCAS, MODULES.SETTINGS_PERSONAS, MODULES.APPS_POR_ENTIDAD, MODULES.SETTINGS_USUARIOS_PERMISOS],
     dashboard: 'admin',
   },
 };
