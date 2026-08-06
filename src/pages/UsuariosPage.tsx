@@ -1,16 +1,24 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, KeyRound } from 'lucide-react'
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getRoles } from '../api/crmApi'
 import type { Usuario, UsuarioCreate } from '../api/types'
 import { SlidePanel } from '../components/SlidePanel'
 import { CommonCard } from '../components/CommonCard'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { showToast } from '../components/Toast'
+import { useAuth } from '../context/AuthContext'
 
 export function UsuariosPage() {
+  const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canManagePermisos = hasPermission('settings-usuarios-permisos', 'read')
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Usuario | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<Usuario | null>(null)
 
   const { data: usuariosRes, isLoading } = useQuery({
     queryKey: ['usuarios', search],
@@ -31,6 +39,10 @@ export function UsuariosPage() {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] })
       setShowModal(false)
     },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Error al crear usuario'
+      showToast(msg, 'error')
+    },
   })
 
   const updateMutation = useMutation({
@@ -41,11 +53,23 @@ export function UsuariosPage() {
       setShowModal(false)
       setEditing(null)
     },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Error al actualizar usuario'
+      showToast(msg, 'error')
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteUsuario,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['usuarios'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      showToast('Usuario eliminado', 'success')
+      setPendingDelete(null)
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar usuario'
+      showToast(msg, 'error')
+    },
   })
 
   function handleEdit(u: Usuario) {
@@ -53,10 +77,8 @@ export function UsuariosPage() {
     setShowModal(true)
   }
 
-  function handleDelete(id: number) {
-    if (window.confirm('¿Eliminar este usuario?')) {
-      deleteMutation.mutate(id)
-    }
+  function handleDelete(u: Usuario) {
+    setPendingDelete(u)
   }
 
   function handleClose() {
@@ -122,6 +144,15 @@ export function UsuariosPage() {
                   },
                 ]}
                 menuItems={[
+                  ...(canManagePermisos
+                    ? [
+                        {
+                          icon: <KeyRound size={14} />,
+                          label: 'Ver permisos',
+                          onClick: () => navigate(`/settings/usuarios/${u.id}/permisos`),
+                        },
+                      ]
+                    : []),
                   {
                     icon: <Pencil size={14} />,
                     label: 'Editar',
@@ -130,7 +161,7 @@ export function UsuariosPage() {
                   {
                     icon: <Trash2 size={14} />,
                     label: 'Eliminar',
-                    onClick: () => handleDelete(u.id),
+                    onClick: () => handleDelete(u),
                     danger: true,
                   },
                 ]}
@@ -157,6 +188,28 @@ export function UsuariosPage() {
           isMutating={createMutation.isPending || updateMutation.isPending}
         />
       )}
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        variant="danger"
+        title="Eliminar usuario"
+        message={
+          pendingDelete ? (
+            <>
+              ¿Eliminar a <strong className="text-slate-100">{pendingDelete.nombre}</strong>?
+              <br />
+              <span className="text-slate-400 text-xs">
+                Esta acción no se puede deshacer. Se perderán también sus permisos scopados.
+              </span>
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        loading={deleteMutation.isPending}
+        onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }
