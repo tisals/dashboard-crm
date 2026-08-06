@@ -24,6 +24,8 @@ interface Props {
   appName: string
   initialScopedVistas: string[]
   rolDefaultVistas: string[]
+  /** Full effective permisos (scoped ∪ defaults) — optional, shown as a count hint in the header. */
+  effectivePermisos?: string[]
   onChange?: () => void
 }
 
@@ -48,6 +50,7 @@ export function PermissionsMatrix({
   appName,
   initialScopedVistas,
   rolDefaultVistas,
+  effectivePermisos,
   onChange,
 }: Props) {
   void _appSlug // Reserved for future per-vista catalogue lookup
@@ -171,6 +174,9 @@ export function PermissionsMatrix({
           </h3>
           <p className="text-xs text-slate-500">
             {scoped.length} override{scoped.length === 1 ? '' : 's'} activo{scoped.length === 1 ? '' : 's'}
+            {effectivePermisos && effectivePermisos.length > 0 && (
+              <> · {effectivePermisos.length} efectivo{effectivePermisos.length === 1 ? '' : 's'}</>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

@@ -729,4 +729,47 @@ export async function resetUserAppPermisosToRoleDefaults(userId: number, appId: 
   return data.data
 }
 
+// ── Identity bundle (admin-only) ──────────────────────
+
+export interface UserIdentityApp {
+  id: number
+  slug: string
+  nombre: string
+  tipo: 'internal' | 'external' | 'customer'
+  auth_type: 'sanctum' | 'api_key'
+  activo: boolean
+  entidades_count: number
+  permisos_scoped: string[]
+  permisos_efectivos: string[]
+}
+
+export interface UserIdentity {
+  user: {
+    id: number
+    nombre: string
+    email: string
+    estado: string
+    rol: { id: number; nombre: string; es_super_admin: boolean }
+  }
+  rol_defaults: string[]
+  apps: UserIdentityApp[]
+  scope_label: string
+  computed_at: string
+  cache_ttl_seconds: number
+}
+
+/**
+ * Returns the full identity bundle for an arbitrary user (admin-only).
+ * Used by the admin matrix UI to show rol defaults + scoped permisos.
+ */
+export async function getUserIdentity(userId: number): Promise<UserIdentity> {
+  const { data } = await crmApi.get<ApiResponse<UserIdentity>>(
+    `/usuarios/${userId}/identity`,
+  )
+  if (!data.success || !data.data) {
+    throw new Error(data.error ?? 'Error al obtener identity del usuario')
+  }
+  return data.data
+}
+
 export default crmApi

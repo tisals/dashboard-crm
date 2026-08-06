@@ -6,6 +6,7 @@ import {
   getUsuario,
   getApps,
   getUserAppPermisos,
+  getUserIdentity,
 } from '../api/crmApi'
 import { PermissionsMatrix } from '../components/PermissionsMatrix'
 import type { AppCatalog } from '../api/types'
@@ -53,7 +54,19 @@ export function UsuarioPermisosPage() {
     enabled: Number.isFinite(userId) && userId > 0 && activeAppId !== null,
   })
 
+  // Identity bundle: rol defaults + apps with scoped + effective permisos.
+  // Used to populate the "Defaults del rol" column in the matrix (was empty
+  // before Sprint 2.5). Backend caches this for 60s.
+  const { data: identityRes } = useQuery({
+    queryKey: ['usuarios', userId, 'identity'],
+    queryFn: () => getUserIdentity(userId),
+    enabled: Number.isFinite(userId) && userId > 0,
+  })
+
   const scopedVistas = scopedRes?.permisos ?? []
+  const rolDefaultVistas = identityRes?.rol_defaults ?? []
+  const appPermisosEfectivos =
+    identityRes?.apps.find((a) => a.id === activeAppId)?.permisos_efectivos ?? []
 
   const activeApp = apps.find((a) => a.id === activeAppId)
 
@@ -221,7 +234,8 @@ export function UsuarioPermisosPage() {
               appSlug={activeApp.slug}
               appName={activeApp.nombre}
               initialScopedVistas={scopedVistas}
-              rolDefaultVistas={[]}
+              rolDefaultVistas={rolDefaultVistas}
+              effectivePermisos={appPermisosEfectivos}
               onChange={() => {
                 // Mutations inside the matrix already invalidate the scoped
                 // query — no parent action required here. Reserved for
