@@ -554,6 +554,22 @@ export interface DetalleLinea {
   iva: number
 }
 
+// ── User × App Scoped Permissions (admin granular) ──
+
+/**
+ * Response for GET /usuarios/{userId}/apps/{appId}/permisos
+ * Note: returns ONLY scoped overrides for the (user, app), NOT the rol defaults.
+ * The matrix UI shows scoped as editable; rol defaults are derived separately
+ * (the dashboard currently has no endpoint for cross-user rol defaults, so the
+ * parent passes `rolDefaultVistas=[]` and shows a "use Reset" hint).
+ */
+export interface UserAppPermisos {
+  usuario_id: number
+  app_id: number
+  permisos: string[]
+  total: number
+}
+
 // ── Pipeline ───────────────────────────────────────
 
 export interface PipelineEtapa {

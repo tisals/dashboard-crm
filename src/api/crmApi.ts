@@ -34,6 +34,7 @@ import type {
   MarcaCreate,
   Pipeline,
   PipelineEtapa,
+  UserAppPermisos,
 } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8001/api/v1'
@@ -668,6 +669,64 @@ export async function removeEntidadUsuario(payload: { usuario_id: number; entida
   })
   const { data } = await crmApi.delete<ApiResponse<any>>(`/entidad-usuario?${params.toString()}`)
   return data
+}
+
+// ── User × App Scoped Permissions (admin granular) ──
+// See `Docs/changes/multi-app-auth-identity/specs/admin-granular-permissions`.
+// Backend responses are wrapped in the standard envelope (`success` + `data`).
+
+export async function getUserAppPermisos(userId: number, appId: number): Promise<UserAppPermisos> {
+  const { data } = await crmApi.get<ApiResponse<UserAppPermisos>>(
+    `/usuarios/${userId}/apps/${appId}/permisos`,
+  )
+  if (!data.success || !data.data) {
+    throw new Error(data.error ?? 'Error al obtener permisos del usuario')
+  }
+  return data.data
+}
+
+/** Replace-all. Backend body: `{ vistas: string[] }`. */
+export async function syncUserAppPermisos(userId: number, appId: number, vistas: string[]): Promise<UserAppPermisos> {
+  const { data } = await crmApi.post<ApiResponse<UserAppPermisos>>(
+    `/usuarios/${userId}/apps/${appId}/permisos`,
+    { vistas },
+  )
+  if (!data.success || !data.data) {
+    throw new Error(data.error ?? 'Error al sincronizar permisos')
+  }
+  return data.data
+}
+
+/** Grant one vista (idempotent). */
+export async function grantUserAppPermiso(userId: number, appId: number, vista: string): Promise<void> {
+  const { data } = await crmApi.post<ApiResponse<unknown>>(
+    `/usuarios/${userId}/apps/${appId}/permisos/grant`,
+    { vista },
+  )
+  if (!data.success) {
+    throw new Error(data.error ?? 'Error al otorgar permiso')
+  }
+}
+
+/** Revoke one vista. Throws on 404 (not found). */
+export async function revokeUserAppPermiso(userId: number, appId: number, vista: string): Promise<void> {
+  const { data } = await crmApi.delete<ApiResponse<unknown>>(
+    `/usuarios/${userId}/apps/${appId}/permisos/${encodeURIComponent(vista)}`,
+  )
+  if (!data.success) {
+    throw new Error(data.error ?? 'Error al revocar permiso')
+  }
+}
+
+/** Clear all scoped overrides; user's effective perms revert to rol defaults. */
+export async function resetUserAppPermisosToRoleDefaults(userId: number, appId: number): Promise<{ removed_count: number }> {
+  const { data } = await crmApi.post<ApiResponse<{ usuario_id: number; app_id: number; removed_count: number }>>(
+    `/usuarios/${userId}/apps/${appId}/permisos/reset-to-role-defaults`,
+  )
+  if (!data.success || !data.data) {
+    throw new Error(data.error ?? 'Error al resetear permisos')
+  }
+  return data.data
 }
 
 export default crmApi
