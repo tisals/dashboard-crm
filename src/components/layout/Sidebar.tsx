@@ -22,6 +22,7 @@ import {
   GitBranch,
   UserCircle,
   Boxes,
+  KeyRound,
 } from 'lucide-react'
 
 const moduleIcons: Record<string, React.ComponentType<any>> = {
@@ -43,6 +44,7 @@ const moduleIcons: Record<string, React.ComponentType<any>> = {
   [MODULES.PIPELINES]: GitBranch,
   [MODULES.SETTINGS_PERSONAS]: UserCircle,
   [MODULES.APPS_POR_ENTIDAD]: Boxes,
+  [MODULES.SETTINGS_USUARIOS_PERMISOS]: KeyRound,
 }
 
 const moduleLabels: Record<string, string> = {
@@ -64,6 +66,7 @@ const moduleLabels: Record<string, string> = {
   [MODULES.PIPELINES]: 'Pipelines',
   [MODULES.SETTINGS_PERSONAS]: 'Personas',
   [MODULES.APPS_POR_ENTIDAD]: 'Apps por Entidad',
+  [MODULES.SETTINGS_USUARIOS_PERMISOS]: 'Permisos Usuarios',
 }
 
 interface GroupDef {
@@ -86,7 +89,7 @@ const GROUPS: GroupDef[] = [
   },
   {
     label: 'Configuración',
-    modules: [MODULES.SETTINGS_PERSONAS, MODULES.APPS_POR_ENTIDAD],
+    modules: [MODULES.SETTINGS_PERSONAS, MODULES.APPS_POR_ENTIDAD, MODULES.SETTINGS_USUARIOS_PERMISOS],
   },
 ]
 
@@ -98,6 +101,10 @@ function moduleToPath(module: string): string {
   if (module === MODULES.SEGUIMIENTOS) return '/seguimientos'
   if (module === MODULES.SETTINGS_PERSONAS) return '/settings/personas'
   if (module === MODULES.APPS_POR_ENTIDAD) return '/settings/apps'
+  // SETTINGS_USUARIOS_PERMISOS is a per-user route (/:userId/permisos) — the
+  // sidebar link points at the user list (Usuarios module) where admins pick
+  // who to manage permissions for.
+  if (module === MODULES.SETTINGS_USUARIOS_PERMISOS) return '/usuarios'
   return `/${module}`
 }
 
